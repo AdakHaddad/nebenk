@@ -1,0 +1,17 @@
+[package]
+name = "nebenk-wasm"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+nebenk-core = { path = "../nebenk-core" }
+wasmtime = { workspace = true }
+wasmtime-wasi = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+cbor4ii = { workspace = true }
+blake3 = { workspace = true }
