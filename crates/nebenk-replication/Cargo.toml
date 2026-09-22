@@ -1,0 +1,19 @@
+[package]
+name = "nebenk-replication"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+nebenk-core = { path = "../nebenk-core" }
+nebenk-identity = { path = "../nebenk-identity" }
+nebenk-storage = { path = "../nebenk-storage" }
+nebenk-network = { path = "../nebenk-network" }
+tokio = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+blake3 = { workspace = true }
+bs58 = { workspace = true }

@@ -1,0 +1,16 @@
+[package]
+name = "nebenk-identity"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+nebenk-core = { path = "../nebenk-core" }
+ed25519-dalek = { workspace = true }
+rand = { workspace = true }
+serde = { workspace = true }
+cbor4ii = { workspace = true }
+thiserror = { workspace = true }
+blake3 = { workspace = true }
+bs58 = { workspace = true }
