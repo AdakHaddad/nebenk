@@ -24,9 +24,10 @@ mod tests {
         let addr = listener.local_addr().unwrap();
 
         let cluster_clone = cluster.clone();
+        let expected_client_node_id = id_client.node_id();
         let server_handle = tokio::spawn(async move {
             let mut peer = listener.accept(&id_server, &cluster_clone).await.unwrap();
-            assert_eq!(peer.peer_node_id, id_client.node_id());
+            assert_eq!(peer.peer_node_id, expected_client_node_id);
 
             // Receive ping, send pong
             if let Some(NetworkMessage::Heartbeat { revision, .. }) = peer.recv().await.unwrap() {

@@ -5,10 +5,9 @@ pub use sync::{apply_replicated_op, apply_sync_response, handle_sync_request};
 #[cfg(test)]
 mod tests {
     use super::*;
-    use nebenk_core::traits::{LogStore, StateEngine};
+    use nebenk_core::traits::{LogStore, StateEngine, SnapshotStore};
     use nebenk_core::types::{ClusterId, OperationEnvelope, Snapshot, SnapshotHeader};
     use nebenk_identity::NodeIdentity;
-    use nebenk_network::NetworkMessage;
     use nebenk_storage::SqliteStore;
     use nebenk_wasm::{KvCommand, KvQuery, KvQueryResult, NativeKvEngine};
 
