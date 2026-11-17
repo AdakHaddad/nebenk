@@ -16,6 +16,13 @@ const nextConfig = {
   },
   webpack(config) {
     config.experiments = { ...config.experiments, asyncWebAssembly: true };
+    
+    // Add path aliases for module resolution
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': require('path').resolve(__dirname, 'src'),
+    };
+    
     return config;
   },
 };
