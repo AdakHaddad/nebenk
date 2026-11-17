@@ -390,7 +390,6 @@ Authenticate
      │
      ▼
 Discover Cluster
-     │
      ▼
 Download Application
      │
