@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'export',
+  images: { unoptimized: true },
   reactStrictMode: true,
   async headers() {
     return [
@@ -17,5 +19,4 @@ const nextConfig = {
     return config;
   },
 };
-
 module.exports = nextConfig;
