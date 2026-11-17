@@ -1,6 +1,6 @@
 'use client';
 
-import { DocsLayout } from '../../docs-layout';
+import { DocsLayout } from '../docs-layout';
 import { MarkdownRenderer } from '../../components/MarkdownRenderer';
 
 export default function ApiPage() {
