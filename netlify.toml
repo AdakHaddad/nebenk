@@ -5,3 +5,8 @@
 
 [build.environment]
   NODE_VERSION = "20"
+
+# Disable Next.js plugin - we use static export, not SSR
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+  enabled = false
