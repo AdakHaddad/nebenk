@@ -48,7 +48,9 @@ pub async fn perform_client_handshake(
         }) => Err(NebenkError::Unauthorized(
             error_message.unwrap_or_else(|| "Handshake rejected by peer".into()),
         )),
-        _ => Err(NebenkError::Network("Expected HandshakeAck response".into())),
+        _ => Err(NebenkError::Network(
+            "Expected HandshakeAck response".into(),
+        )),
     }
 }
 
@@ -88,7 +90,9 @@ pub async fn perform_server_handshake(
                     error_message: Some(format!("Invalid signature: {e}")),
                 };
                 let _ = stream.send_message(&ack).await;
-                return Err(NebenkError::Unauthorized(format!("Verification failed: {e}")));
+                return Err(NebenkError::Unauthorized(format!(
+                    "Verification failed: {e}"
+                )));
             }
 
             let ack = NetworkMessage::HandshakeAck {

@@ -5,7 +5,7 @@ pub use sync::{apply_replicated_op, apply_sync_response, handle_sync_request};
 #[cfg(test)]
 mod tests {
     use super::*;
-    use nebenk_core::traits::{LogStore, StateEngine, SnapshotStore};
+    use nebenk_core::traits::{LogStore, SnapshotStore, StateEngine};
     use nebenk_core::types::{ClusterId, OperationEnvelope, Snapshot, SnapshotHeader};
     use nebenk_identity::NodeIdentity;
     use nebenk_storage::SqliteStore;
@@ -104,8 +104,7 @@ mod tests {
         );
         op3.signature = primary_id.sign(&op3.digest_for_signing());
 
-        let rev3 =
-            apply_replicated_op(&mut replica_engine, &mut replica_storage, op3).unwrap();
+        let rev3 = apply_replicated_op(&mut replica_engine, &mut replica_storage, op3).unwrap();
         assert_eq!(rev3, 3);
 
         // Query key 3 on replica

@@ -5,7 +5,7 @@ pub mod transport;
 
 pub use handshake::{perform_client_handshake, perform_server_handshake, HandshakeResult};
 pub use peer::{P2pListener, P2pPeer};
-pub use protocol::NetworkMessage;
+pub use protocol::{ClusterMember, Heartbeat, HeartbeatAck, NetworkMessage, NodeRole, NodeState};
 pub use transport::P2pFramedStream;
 
 #[cfg(test)]
@@ -35,6 +35,7 @@ mod tests {
                 peer.send(&NetworkMessage::HeartbeatAck {
                     node_id: id_server.node_id(),
                     timestamp_ms: 2000,
+                    members: vec![],
                 })
                 .await
                 .unwrap();
@@ -50,8 +51,11 @@ mod tests {
         client_peer
             .send(&NetworkMessage::Heartbeat {
                 node_id: id_client.node_id(),
+                cluster_id: cluster.clone(),
                 revision: 42,
                 timestamp_ms: 1999,
+                role: NodeRole::Replica,
+                state: NodeState::Active,
             })
             .await
             .unwrap();

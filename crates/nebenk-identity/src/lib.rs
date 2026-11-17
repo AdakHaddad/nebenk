@@ -28,8 +28,9 @@ impl NodeIdentity {
         } else {
             let identity = Self::generate();
             if let Some(parent) = path.parent() {
-                fs::create_dir_all(parent)
-                    .map_err(|e| NebenkError::Identity(format!("Failed to create key directory: {e}")))?;
+                fs::create_dir_all(parent).map_err(|e| {
+                    NebenkError::Identity(format!("Failed to create key directory: {e}"))
+                })?;
             }
             identity.save_to_file(path)?;
             Ok(identity)
@@ -85,8 +86,9 @@ impl NodeIdentity {
 
     /// Verify a signature against a given NodeId.
     pub fn verify(node_id: &NodeId, message: &[u8], signature_bytes: &[u8]) -> Result<()> {
-        let verifying_key = VerifyingKey::from_bytes(node_id.as_bytes())
-            .map_err(|e| NebenkError::Identity(format!("Invalid public key bytes for node: {e}")))?;
+        let verifying_key = VerifyingKey::from_bytes(node_id.as_bytes()).map_err(|e| {
+            NebenkError::Identity(format!("Invalid public key bytes for node: {e}"))
+        })?;
         if signature_bytes.len() != 64 {
             return Err(NebenkError::Identity(format!(
                 "Invalid signature length: expected 64, got {}",
@@ -103,11 +105,7 @@ impl NodeIdentity {
     }
 
     /// Create an invitation token for a new node to join a cluster.
-    pub fn create_invitation(
-        &self,
-        cluster_id: &ClusterId,
-        expires_at_epoch_s: u64,
-    ) -> String {
+    pub fn create_invitation(&self, cluster_id: &ClusterId, expires_at_epoch_s: u64) -> String {
         let mut payload = Vec::new();
         payload.extend_from_slice(cluster_id.as_str().as_bytes());
         payload.extend_from_slice(&expires_at_epoch_s.to_le_bytes());
@@ -123,10 +121,7 @@ impl NodeIdentity {
     }
 
     /// Verify an invitation token against the author node's public key.
-    pub fn verify_invitation(
-        token: &str,
-        current_epoch_s: u64,
-    ) -> Result<(ClusterId, NodeId)> {
+    pub fn verify_invitation(token: &str, current_epoch_s: u64) -> Result<(ClusterId, NodeId)> {
         let prefix = "nebenk-invite://";
         if !token.starts_with(prefix) {
             return Err(NebenkError::Identity("Invalid invitation format".into()));

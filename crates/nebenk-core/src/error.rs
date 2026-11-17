@@ -20,6 +20,9 @@ pub enum NebenkError {
     #[error("Network error: {0}")]
     Network(String),
 
+    #[error("Membership error: {0}")]
+    Membership(String),
+
     #[error("Invalid state transition: expected revision {expected}, got {actual}")]
     InvalidRevision { expected: u64, actual: u64 },
 

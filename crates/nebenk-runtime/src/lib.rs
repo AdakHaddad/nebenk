@@ -9,6 +9,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing::{info, warn};
 
+#[derive(Clone)]
 pub struct NodeConfig {
     pub cluster_id: ClusterId,
     pub is_primary: bool,
@@ -21,7 +22,7 @@ pub struct NodeRuntime {
     identity: Arc<NodeIdentity>,
     config: NodeConfig,
     storage: Arc<Mutex<SqliteStore>>,
-    engine: Box<dyn StateEngine>,
+    engine: Box<dyn StateEngine + Send + Sync>,
     ops_since_last_snapshot: u64,
 }
 
@@ -30,7 +31,7 @@ impl NodeRuntime {
         identity: NodeIdentity,
         config: NodeConfig,
         storage: SqliteStore,
-        engine: Box<dyn StateEngine>,
+        engine: Box<dyn StateEngine + Send + Sync>,
     ) -> Self {
         Self {
             identity: Arc::new(identity),
@@ -55,7 +56,10 @@ impl NodeRuntime {
 
     /// Recover state on node startup by restoring the latest snapshot and replaying the WAL.
     pub async fn recover(&mut self) -> Result<u64> {
-        info!("Starting node recovery for cluster {}", self.config.cluster_id);
+        info!(
+            "Starting node recovery for cluster {}",
+            self.config.cluster_id
+        );
         let storage = self.storage.lock().await;
 
         let mut start_rev = 0;

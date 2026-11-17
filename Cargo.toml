@@ -8,6 +8,7 @@ members = [
     "crates/nebenk-runtime",
     "crates/nebenk-network",
     "crates/nebenk-replication",
+    "crates/nebenk-membership",
     "crates/nebenk-cli",
 ]
 

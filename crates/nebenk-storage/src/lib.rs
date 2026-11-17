@@ -290,7 +290,9 @@ impl SnapshotStore for SqliteStore {
                 })
             })
             .optional()
-            .map_err(|e| NebenkError::Storage(format!("Failed to query snapshot at revision: {e}")))?;
+            .map_err(|e| {
+                NebenkError::Storage(format!("Failed to query snapshot at revision: {e}"))
+            })?;
 
         Ok(result)
     }
@@ -336,7 +338,10 @@ mod tests {
         );
 
         store.save_snapshot(&snap).unwrap();
-        let loaded = store.get_latest_snapshot().unwrap().expect("snapshot exists");
+        let loaded = store
+            .get_latest_snapshot()
+            .unwrap()
+            .expect("snapshot exists");
         assert_eq!(loaded.header.revision, 2);
         assert!(loaded.verify_hash());
 

@@ -22,6 +22,34 @@ pub trait StateEngine: Send {
     fn current_revision(&self) -> u64;
 }
 
+/// Blanket implementation of StateEngine for Box<dyn StateEngine>.
+/// This allows using boxed trait objects directly where a StateEngine is expected.
+impl StateEngine for Box<dyn StateEngine> {
+    fn init(&mut self, config: &[u8]) -> Result<()> {
+        self.as_mut().init(config)
+    }
+
+    fn apply(&mut self, op: &OperationEnvelope) -> Result<ApplyResult> {
+        self.as_mut().apply(op)
+    }
+
+    fn snapshot(&mut self) -> Result<Vec<u8>> {
+        self.as_mut().snapshot()
+    }
+
+    fn restore(&mut self, revision: u64, snapshot_data: &[u8]) -> Result<()> {
+        self.as_mut().restore(revision, snapshot_data)
+    }
+
+    fn query(&self, query_payload: &[u8]) -> Result<Vec<u8>> {
+        self.as_ref().query(query_payload)
+    }
+
+    fn current_revision(&self) -> u64 {
+        self.as_ref().current_revision()
+    }
+}
+
 /// Trait for durable write-ahead logging of state operations.
 pub trait LogStore: Send {
     /// Append an operation to the persistent write-ahead log.

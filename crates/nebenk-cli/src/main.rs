@@ -33,15 +33,10 @@ enum Commands {
     Status,
 
     /// Write a key-value pair to the state machine
-    Put {
-        key: String,
-        value: String,
-    },
+    Put { key: String, value: String },
 
     /// Read a key value from the state machine
-    Get {
-        key: String,
-    },
+    Get { key: String },
 
     /// List all keys currently in the state machine
     List,
@@ -177,9 +172,7 @@ async fn main() -> anyhow::Result<()> {
             let key_path = cli.data_dir.join("node.key");
             let identity = NodeIdentity::load_or_create(key_path)?;
             let cluster_id = ClusterId::new(&cli.cluster);
-            let now_s = SystemTime::now()
-                .duration_since(UNIX_EPOCH)?
-                .as_secs();
+            let now_s = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
             let token = identity.create_invitation(&cluster_id, now_s + expires_in);
             println!("Invitation Token (valid for {}s):", expires_in);
             println!("{}", token);

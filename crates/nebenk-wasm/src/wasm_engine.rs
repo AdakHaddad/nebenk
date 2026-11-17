@@ -110,18 +110,15 @@ impl StateEngine for WasmEngine {
         let (op_ptr, op_len) = self.write_guest_buffer(&op.payload)?;
         let res = self.apply_fn.call(
             &mut self.store,
-            (
-                op_ptr,
-                op_len,
-                op.revision as i64,
-                op.timestamp_ms as i64,
-            ),
+            (op_ptr, op_len, op.revision as i64, op.timestamp_ms as i64),
         );
         let _ = self.free_guest_buffer(op_ptr, op_len);
 
         let code = res.map_err(|e| NebenkError::Wasm(format!("Execution failed: {e}")))?;
         if code != 0 {
-            return Err(NebenkError::Wasm(format!("nebenk_apply returned non-zero code: {code}")));
+            return Err(NebenkError::Wasm(format!(
+                "nebenk_apply returned non-zero code: {code}"
+            )));
         }
 
         self.current_rev = op.revision;
@@ -145,7 +142,9 @@ impl StateEngine for WasmEngine {
 
         if res != 0 {
             let _ = self.free_guest_buffer(out_desc_ptr, out_desc_len);
-            return Err(NebenkError::Wasm(format!("nebenk_snapshot returned code {res}")));
+            return Err(NebenkError::Wasm(format!(
+                "nebenk_snapshot returned code {res}"
+            )));
         }
 
         let mut desc_bytes = [0u8; 8];
@@ -173,7 +172,9 @@ impl StateEngine for WasmEngine {
 
         let code = res.map_err(|e| NebenkError::Wasm(format!("Restore call failed: {e}")))?;
         if code != 0 {
-            return Err(NebenkError::Wasm(format!("nebenk_restore returned code: {code}")));
+            return Err(NebenkError::Wasm(format!(
+                "nebenk_restore returned code: {code}"
+            )));
         }
 
         self.current_rev = revision;

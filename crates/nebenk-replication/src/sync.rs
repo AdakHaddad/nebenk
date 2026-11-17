@@ -50,8 +50,10 @@ pub fn apply_sync_response<E: StateEngine, S: LogStore + SnapshotStore>(
                 if !snap.verify_hash() {
                     return Err(NebenkError::StateHashMismatch {
                         expected: bs58::encode(&snap.header.state_hash).into_string(),
-                        actual: bs58::encode(&nebenk_core::types::Snapshot::compute_hash(&snap.data))
-                            .into_string(),
+                        actual: bs58::encode(&nebenk_core::types::Snapshot::compute_hash(
+                            &snap.data,
+                        ))
+                        .into_string(),
                     });
                 }
                 info!(
