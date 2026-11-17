@@ -10,6 +10,7 @@ members = [
     "crates/nebenk-replication",
     "crates/nebenk-membership",
     "crates/nebenk-cli",
+    "benches-crate",
 ]
 
 [workspace.package]
@@ -40,3 +41,4 @@ anyhow = "1.0"
 bytes = "1.10"
 bs58 = "0.5"
 tempfile = "3.17"
+criterion = "0.5"

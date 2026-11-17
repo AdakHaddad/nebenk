@@ -1,0 +1,30 @@
+[package]
+name = "nebenk-benches"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+nebenk-core = { path = "../crates/nebenk-core" }
+nebenk-identity = { path = "../crates/nebenk-identity" }
+nebenk-storage = { path = "../crates/nebenk-storage" }
+nebenk-wasm = { path = "../crates/nebenk-wasm" }
+nebenk-runtime = { path = "../crates/nebenk-runtime" }
+nebenk-network = { path = "../crates/nebenk-network" }
+nebenk-membership = { path = "../crates/nebenk-membership" }
+criterion = { version = "0.5", features = ["html_reports"] }
+tokio = { version = "1.43", features = ["full"] }
+blake3 = "1.5"
+tempfile = "3.17"
+
+[[bench]]
+name = "storage_bench"
+harness = false
+
+[[bench]]
+name = "membership_bench"
+harness = false
+
+[[bench]]
+name = "runtime_bench"
+harness = false
