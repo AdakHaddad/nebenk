@@ -1,7 +1,7 @@
 'use client';
 
-import { DocsLayout } from '@/app/docs-layout';
-import { MarkdownRenderer } from '@/components/MarkdownRenderer';
+import { DocsLayout } from '../../docs-layout';
+import { MarkdownRenderer } from '../../components/MarkdownRenderer';
 
 export default function PrdPage() {
   const content = `
@@ -254,7 +254,7 @@ Developers use multiple personal devices to test distributed applications.
                │
                ▼
            Host OS
-\`\`\>
+\`\`\`
 
 ---
 
@@ -654,7 +654,7 @@ nebenk status
 nebenk peers
 nebenk snapshot
 nebenk logs
-\`\`\>
+\`\`\`
 
 ---
 
@@ -887,7 +887,7 @@ Dynamic Membership
 P2P Networking
         +
 Device Awareness
-\`\`\>
+\`\`\`
 
 Overlaps with: Containers, Kubernetes, Raft, CRDTs, P2P frameworks, Databases — but replaces none directly.
 
@@ -913,8 +913,7 @@ nebenk/
 │   ├── nebenk-replication/
 │   ├── nebenk-storage/
 │   ├── nebenk-identity/
-│   ├── nebenk-wasm/
-│   └── nebenk-cli/
+│   └── nebenk-wasm/
 │
 ├── sdk/
 │   └── wasm/
@@ -926,7 +925,7 @@ nebenk/
 ├── android/
 │
 └── tests/
-\`\`\>
+\`\`\`
 
 ---
 
@@ -973,7 +972,7 @@ The device should not be the permanent home of the application.
       ┌───────┼───────┐
       ▼       ▼       ▼
    Device A Device B Device C
-\`\`\>
+\`\`\`
 
 The long-term goal is not simply to make another deployment tool. It is to make the device an implementation detail of where an application happens to be running.
 
