@@ -52,13 +52,16 @@ moderation decisions when appropriate.
 
 This Code of Conduct applies within all community spaces, and also applies
 when an individual is officially representing the community in public spaces.
+Examples of representing our community include using an official e-mail address,
+posting via an official social media account, or acting as an appointed
+representative at an online or offline event.
 
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
 reported to the community leaders responsible for enforcement at
-[INSERT CONTACT METHOD]. All complaints will be reviewed and investigated
-promptly and fairly.
+conduct@nebenk.dev. All complaints will be reviewed and investigated promptly
+and fairly.
 
 All community leaders are obligated to respect the privacy and security of the
 reporter of any incident.
@@ -85,9 +88,9 @@ actions.
 **Consequence**: A warning with consequences for continued behavior. No
 interaction with the people involved, including unsolicited interaction with
 those enforcing the Code of Conduct, for a specified period of time. This
-includes avoiding interactions in community spaces as well as external channels
-like social media. Violating these terms may lead to a temporary or permanent
-ban.
+includes avoiding interactions in community spaces as well as external
+channels like social media. Violating these terms may lead to a temporary or
+permanent ban.
 
 ### 3. Temporary Ban
 
@@ -115,5 +118,9 @@ This Code of Conduct is adapted from the [Contributor Covenant][homepage],
 version 2.1, available at
 [https://www.contributor-covenant.org/version/2/1/code_of_conduct.html][v2.1].
 
+Community Impact Guidelines were inspired by [Mozilla's code of conduct
+enforcement ladder][Mozilla CoC].
+
 [homepage]: https://www.contributor-covenant.org
 [v2.1]: https://www.contributor-covenant.org/version/2/1/code_of_conduct.html
+[Mozilla CoC]: https://github.com/mozilla/diversity
