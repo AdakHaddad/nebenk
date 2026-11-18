@@ -37,6 +37,27 @@ pub enum NebenkError {
 
     #[error("General runtime error: {0}")]
     Runtime(String),
+
+    #[error("Insufficient replicas: required {required}, available {available}")]
+    InsufficientReplicas { required: u32, available: u32 },
+
+    #[error("Invalid signature")]
+    InvalidSignature,
+
+    #[error("Stale advertisement")]
+    StaleAdvertisement,
+
+    #[error("Escrow not found")]
+    EscrowNotFound,
+
+    #[error("Escrow not active")]
+    EscrowNotActive,
+
+    #[error("Provider not found")]
+    ProviderNotFound,
+
+    #[error("Stake locked")]
+    StakeLocked,
 }
 
 pub type Result<T> = std::result::Result<T, NebenkError>;
