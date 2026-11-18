@@ -15,6 +15,13 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
-futures-util = "0.3"
+futures-util = { version = "0.3", features = ["sink"] }
 rand = { workspace = true }
 bs58 = { workspace = true }
+uuid = { workspace = true }
+libp2p = { workspace = true }
+anyhow = { workspace = true }
+multiaddr = { version = "0.18" }
+
+[dev-dependencies]
+tempfile = { workspace = true }

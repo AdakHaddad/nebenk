@@ -5,7 +5,14 @@ pub mod transport;
 
 pub use handshake::{perform_client_handshake, perform_server_handshake, HandshakeResult};
 pub use peer::{P2pListener, P2pPeer};
-pub use protocol::{ClusterMember, Heartbeat, HeartbeatAck, NetworkMessage, NodeRole, NodeState};
+pub use protocol::{
+    ClusterMember, DeviceCapabilitiesMsg, DeploymentAcceptanceMsg, DeploymentId,
+    DeploymentOfferMsg, DeploymentManifestMsg, GpuInfoMsg, Heartbeat, HeartbeatAck,
+    NatTypeMsg, NetworkMessage, NetworkInfoMsg, NodeRole, NodeState, PricingModelMsg,
+    ProviderAdvertisementMsg, ProviderFilterMsg, ProviderHeartbeatMsg, ProviderListRequestMsg,
+    ProviderListResponseMsg, ReputationScoreMsg, ResourceRequirementsMsg, StakeInfoMsg,
+    ClusterPreferencesMsg,
+};
 pub use transport::P2pFramedStream;
 
 #[cfg(test)]
