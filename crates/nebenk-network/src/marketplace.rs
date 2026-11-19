@@ -1,22 +1,28 @@
 use crate::protocol::{
-    DeploymentAcceptanceMsg, DeploymentOfferMsg, ProviderAdvertisementMsg,
-    ProviderHeartbeatMsg, ProviderListRequestMsg, ProviderListResponseMsg,
+    DeploymentAcceptanceMsg, DeploymentOfferMsg, ProviderAdvertisementMsg, ProviderHeartbeatMsg,
+    ProviderListRequestMsg, ProviderListResponseMsg,
 };
-use libp2p::gossipsub::{Behaviour as Gossipsub, ConfigBuilder, Event as GossipsubEvent, IdentTopic, MessageAuthenticity, MessageId, ValidationMode};
-use libp2p::kad::{store::MemoryStore, Behaviour as Kademlia, Event as KadEvent, QueryId, QueryResult, GetProvidersOk, RecordKey};
-use libp2p::identify::{Behaviour as Identify, Config as IdentifyConfig, Event as IdentifyEvent};
-use libp2p::swarm::{NetworkBehaviour, Swarm, SwarmEvent};
-use libp2p::{Multiaddr, PeerId, Transport};
-use libp2p::identity::Keypair;
-use libp2p::noise;
-use libp2p::yamux;
-use libp2p::tcp;
-use std::collections::HashMap;
 use anyhow::Result;
+use futures_util::StreamExt;
+use libp2p::gossipsub::{
+    Behaviour as Gossipsub, ConfigBuilder, Event as GossipsubEvent, IdentTopic,
+    MessageAuthenticity, MessageId, ValidationMode,
+};
+use libp2p::identify::{Behaviour as Identify, Config as IdentifyConfig, Event as IdentifyEvent};
+use libp2p::identity::Keypair;
+use libp2p::kad::{
+    store::MemoryStore, Behaviour as Kademlia, Event as KadEvent, GetProvidersOk, QueryId,
+    QueryResult, RecordKey,
+};
+use libp2p::noise;
+use libp2p::swarm::{NetworkBehaviour, Swarm, SwarmEvent};
+use libp2p::tcp;
+use libp2p::yamux;
+use libp2p::{Multiaddr, PeerId, Transport};
+use std::collections::HashMap;
 use std::time::Duration;
 use tokio::sync::mpsc;
 use tracing::{debug, info, warn};
-use futures_util::StreamExt;
 
 /// Marketplace gossipsub topics
 pub mod topics {
@@ -88,12 +94,14 @@ impl MarketplaceBehaviour {
                 let data = &msg.data;
                 MessageId::from(format!("{:?}-{:?}", peer_id, data.len()))
             })
-            .build().map_err(|e| anyhow::anyhow!(e))?;
+            .build()
+            .map_err(|e| anyhow::anyhow!(e))?;
 
         let gossipsub = Gossipsub::new(
             MessageAuthenticity::Signed(local_keypair.clone()),
             gossipsub_config,
-        ).map_err(|e| anyhow::anyhow!(e))?;
+        )
+        .map_err(|e| anyhow::anyhow!(e))?;
 
         // Kademlia config - protocol is set via the libp2p config
         let store = MemoryStore::new(local_peer_id);
@@ -101,8 +109,11 @@ impl MarketplaceBehaviour {
 
         // Identify config
         let identify = Identify::new(
-            IdentifyConfig::new("/nebenk/marketplace/1.0.0".to_string(), local_keypair.public())
-                .with_interval(Duration::from_secs(60)),
+            IdentifyConfig::new(
+                "/nebenk/marketplace/1.0.0".to_string(),
+                local_keypair.public(),
+            )
+            .with_interval(Duration::from_secs(60)),
         );
 
         Ok(Self {
@@ -170,7 +181,7 @@ impl MarketplaceNetwork {
         // Build transport
         let noise_config = noise::Config::new(&local_keypair)?;
         let yamux_config = yamux::Config::default();
-        
+
         let transport = tcp::tokio::Transport::new(tcp::Config::default().nodelay(true))
             .upgrade(libp2p::core::upgrade::Version::V1)
             .authenticate(noise_config)
@@ -237,10 +248,12 @@ impl MarketplaceNetwork {
                         return;
                     }
                 };
-                if let Err(e) = self.swarm.behaviour_mut().gossipsub.publish(
-                    IdentTopic::new(topics::PROVIDER_ADVERTISEMENTS),
-                    data,
-                ) {
+                if let Err(e) = self
+                    .swarm
+                    .behaviour_mut()
+                    .gossipsub
+                    .publish(IdentTopic::new(topics::PROVIDER_ADVERTISEMENTS), data)
+                {
                     warn!("Failed to publish advertisement: {}", e);
                 }
             }
@@ -252,10 +265,12 @@ impl MarketplaceNetwork {
                         return;
                     }
                 };
-                if let Err(e) = self.swarm.behaviour_mut().gossipsub.publish(
-                    IdentTopic::new(topics::PROVIDER_HEARTBEATS),
-                    data,
-                ) {
+                if let Err(e) = self
+                    .swarm
+                    .behaviour_mut()
+                    .gossipsub
+                    .publish(IdentTopic::new(topics::PROVIDER_HEARTBEATS), data)
+                {
                     warn!("Failed to publish heartbeat: {}", e);
                 }
             }
@@ -289,10 +304,13 @@ impl MarketplaceNetwork {
             )) => {
                 let topic = message.topic.as_str();
                 if topic == topics::PROVIDER_ADVERTISEMENTS {
-                    if let Ok(adv) = serde_json::from_slice::<ProviderAdvertisementMsg>(&message.data)
+                    if let Ok(adv) =
+                        serde_json::from_slice::<ProviderAdvertisementMsg>(&message.data)
                     {
                         self.provider_cache.insert(peer_id, adv.clone());
-                        let _ = self.event_tx.send(MarketplaceEvent::ProviderAdvertisement(adv));
+                        let _ = self
+                            .event_tx
+                            .send(MarketplaceEvent::ProviderAdvertisement(adv));
                     }
                 } else if topic == topics::PROVIDER_HEARTBEATS {
                     if let Ok(hb) = serde_json::from_slice::<ProviderHeartbeatMsg>(&message.data) {
@@ -301,14 +319,14 @@ impl MarketplaceNetwork {
                 }
             }
             SwarmEvent::Behaviour(MarketplaceBehaviourEvent::Kademlia(
-                KadEvent::OutboundQueryProgressed {
-                    id,
-                    result,
-                    ..
-                },
+                KadEvent::OutboundQueryProgressed { id, result, .. },
             )) => {
                 // Check for GetProviders result
-                if let QueryResult::GetProviders(Ok(GetProvidersOk::FoundProviders { providers, .. })) = result {
+                if let QueryResult::GetProviders(Ok(GetProvidersOk::FoundProviders {
+                    providers,
+                    ..
+                })) = result
+                {
                     if let Some(responder) = self.pending_requests.remove(&id) {
                         // Convert providers to response
                         let providers: Vec<ProviderAdvertisementMsg> = providers

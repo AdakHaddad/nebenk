@@ -1,9 +1,9 @@
 //! Developer client for marketplace deployments
 
-use crate::types::*;
 use crate::provider::ProviderHeartbeat;
-use nebenk_core::types::{ClusterId, NodeId};
+use crate::types::*;
 use nebenk_core::error::{NebenkError, Result};
+use nebenk_core::types::{ClusterId, NodeId};
 use nebenk_identity::NodeIdentity;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -43,10 +43,7 @@ pub struct MarketplaceClient {
 
 impl MarketplaceClient {
     /// Create a new marketplace client
-    pub fn new(
-        config: ClientConfig,
-        identity: Arc<NodeIdentity>,
-    ) -> Self {
+    pub fn new(config: ClientConfig, identity: Arc<NodeIdentity>) -> Self {
         Self {
             config,
             identity,
@@ -55,21 +52,24 @@ impl MarketplaceClient {
             pending_offers: Arc::new(RwLock::new(HashMap::new())),
         }
     }
-    
+
     /// Start discovery of providers (stub)
     pub async fn start_discovery(&self) -> Result<()> {
         info!("Starting provider discovery (stub)");
         Ok(())
     }
-    
+
     /// Handle incoming provider advertisement
     pub async fn handle_advertisement(&self, adv: ProviderAdvertisement) -> Result<()> {
         // Verify signature
         if !adv.verify() {
-            warn!("Invalid provider advertisement signature from {}", adv.node_id);
+            warn!(
+                "Invalid provider advertisement signature from {}",
+                adv.node_id
+            );
             return Ok(());
         }
-        
+
         // Update known providers
         let mut providers = self.known_providers.write().await;
         if let Some(pos) = providers.iter().position(|p| p.node_id == adv.node_id) {
@@ -77,10 +77,10 @@ impl MarketplaceClient {
         } else {
             providers.push(adv);
         }
-        
+
         Ok(())
     }
-    
+
     /// Handle provider heartbeat
     pub async fn handle_heartbeat(&self, hb: ProviderHeartbeat) -> Result<()> {
         let mut providers = self.known_providers.write().await;
@@ -90,7 +90,7 @@ impl MarketplaceClient {
         }
         Ok(())
     }
-    
+
     /// Discover providers matching requirements
     pub async fn discover_providers(
         &self,
@@ -102,8 +102,9 @@ impl MarketplaceClient {
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs();
-        
-        let mut matches: Vec<_> = providers.iter()
+
+        let mut matches: Vec<_> = providers
+            .iter()
             .filter(|p| {
                 // Check if provider is recent (heartbeat within 10 minutes)
                 now.saturating_sub(p.last_heartbeat) < 600
@@ -111,57 +112,68 @@ impl MarketplaceClient {
             .filter(|p| p.reputation.0 >= prefs.min_reputation.0)
             .filter(|p| {
                 // Check capabilities match
-                p.capabilities.cpu_cores >= requirements.min_cpu_cores &&
-                p.capabilities.memory_gb >= requirements.min_memory_gb &&
-                p.capabilities.storage_gb >= requirements.min_storage_gb &&
-                (requirements.required_arch.is_empty() || requirements.required_arch.contains(&p.capabilities.cpu_arch)) &&
-                requirements.required_features.iter().all(|f| p.capabilities.features.contains(f)) &&
-                (!requirements.gpu_required || p.capabilities.gpu.is_some())
+                p.capabilities.cpu_cores >= requirements.min_cpu_cores
+                    && p.capabilities.memory_gb >= requirements.min_memory_gb
+                    && p.capabilities.storage_gb >= requirements.min_storage_gb
+                    && (requirements.required_arch.is_empty()
+                        || requirements
+                            .required_arch
+                            .contains(&p.capabilities.cpu_arch))
+                    && requirements
+                        .required_features
+                        .iter()
+                        .all(|f| p.capabilities.features.contains(f))
+                    && (!requirements.gpu_required || p.capabilities.gpu.is_some())
             })
             .cloned()
             .collect();
-        
+
         // Sort by reputation (highest first), then by price (lowest first)
         matches.sort_by(|a, b| {
-            b.reputation.0.cmp(&a.reputation.0)
+            b.reputation
+                .0
+                .cmp(&a.reputation.0)
                 .then_with(|| a.pricing.cpu_per_hour.cmp(&b.pricing.cpu_per_hour))
         });
-        
+
         // Limit results
         matches.truncate(self.config.max_providers_to_contact as usize);
-        
+
         info!("Found {} matching providers", matches.len());
         Ok(matches)
     }
-    
+
     /// Deploy application to marketplace
-    pub async fn deploy(
-        &self,
-        manifest: DeploymentManifest,
-    ) -> Result<DeploymentId> {
-        info!("Deploying application: {} v{}", manifest.app_name, manifest.app_version);
-        
+    pub async fn deploy(&self, manifest: DeploymentManifest) -> Result<DeploymentId> {
+        info!(
+            "Deploying application: {} v{}",
+            manifest.app_name, manifest.app_version
+        );
+
         // Discover matching providers
-        let providers = self.discover_providers(&manifest.requirements, &manifest.cluster_prefs).await?;
-        
+        let providers = self
+            .discover_providers(&manifest.requirements, &manifest.cluster_prefs)
+            .await?;
+
         if providers.len() < manifest.replication.min_replicas as usize {
             return Err(NebenkError::InsufficientReplicas {
                 required: manifest.replication.min_replicas,
                 available: providers.len() as u32,
             });
         }
-        
+
         // Select providers (top N by reputation/price)
         let selected = &providers[..manifest.replication.min_replicas as usize];
-        
+
         // Create cluster
         let cluster_id = ClusterId::new(format!("deploy-{}", manifest.deployment_id));
-        
+
         // Send deployment offers to selected providers (stub)
         for provider in selected {
-            self.send_deployment_offer(provider, &manifest, &cluster_id).await?;
+            self.send_deployment_offer(provider, &manifest, &cluster_id)
+                .await?;
         }
-        
+
         // Track deployment
         let deployment = ActiveDeployment {
             deployment_id: manifest.deployment_id,
@@ -174,18 +186,26 @@ impl MarketplaceClient {
             escrow_balance: 0,
             total_paid: 0,
         };
-        
-        self.active_deployments.write().await
+
+        self.active_deployments
+            .write()
+            .await
             .insert(manifest.deployment_id, deployment);
-        
+
         // Store pending offers for response handling
-        self.pending_offers.write().await
+        self.pending_offers
+            .write()
+            .await
             .insert(manifest.deployment_id, selected.to_vec());
-        
-        info!("Deployment {} sent to {} providers", manifest.deployment_id, selected.len());
+
+        info!(
+            "Deployment {} sent to {} providers",
+            manifest.deployment_id,
+            selected.len()
+        );
         Ok(manifest.deployment_id)
     }
-    
+
     /// Send deployment offer to a provider (stub)
     async fn send_deployment_offer(
         &self,
@@ -201,66 +221,83 @@ impl MarketplaceClient {
             expires_at: SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .unwrap_or_default()
-                .as_secs() + 3600, // 1 hour
+                .as_secs()
+                + 3600, // 1 hour
         };
-        
+
         // TODO: Send via network
-        debug!("Sent deployment offer to {}: {:?}", provider.node_id, offer.deployment_id);
+        debug!(
+            "Sent deployment offer to {}: {:?}",
+            provider.node_id, offer.deployment_id
+        );
         Ok(())
     }
-    
+
     /// Create cluster invitation token
     async fn create_invitation_token(&self, cluster_id: &ClusterId) -> Result<String> {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs();
-        
+
         let token = self.identity.create_invitation(cluster_id, now + 3600);
         Ok(token)
     }
-    
+
     /// Handle provider acceptance of deployment
     pub async fn handle_acceptance(&self, acceptance: DeploymentAcceptance) -> Result<()> {
         let mut pending = self.pending_offers.write().await;
-        
+
         if let Some(providers) = pending.get_mut(&acceptance.deployment_id) {
             // Update provider status
-            let _ = providers.iter().position(|p| p.node_id == acceptance.provider_node_id);
+            let _ = providers
+                .iter()
+                .position(|p| p.node_id == acceptance.provider_node_id);
         }
-        
+
         // Check if we have enough acceptances
         let mut deployments = self.active_deployments.write().await;
         if let Some(deployment) = deployments.get_mut(&acceptance.deployment_id) {
-            deployment.provider_node_ids.push(acceptance.provider_node_id);
-            
-            if deployment.provider_node_ids.len() >= deployment.manifest.replication.min_replicas as usize {
+            deployment
+                .provider_node_ids
+                .push(acceptance.provider_node_id);
+
+            if deployment.provider_node_ids.len()
+                >= deployment.manifest.replication.min_replicas as usize
+            {
                 deployment.status = DeploymentStatus::Provisioning;
                 // TODO: Trigger actual cluster formation via NEBENK runtime
             }
         }
-        
+
         Ok(())
     }
-    
+
     /// Get deployment status
     pub async fn deployment_status(&self, deployment_id: DeploymentId) -> Option<DeploymentStatus> {
-        self.active_deployments.read().await
+        self.active_deployments
+            .read()
+            .await
             .get(&deployment_id)
             .map(|d| d.status)
     }
-    
+
     /// List active deployments
     pub async fn list_deployments(&self) -> Vec<ActiveDeployment> {
-        self.active_deployments.read().await.values().cloned().collect()
+        self.active_deployments
+            .read()
+            .await
+            .values()
+            .cloned()
+            .collect()
     }
-    
+
     /// Cancel deployment
     pub async fn cancel_deployment(&self, deployment_id: DeploymentId) -> Result<()> {
         let mut deployments = self.active_deployments.write().await;
         if let Some(deployment) = deployments.get_mut(&deployment_id) {
             deployment.status = DeploymentStatus::Cancelled;
-            
+
             // TODO: Notify providers via network
             for provider_id in &deployment.provider_node_ids {
                 debug!("Notified provider {} of cancellation", provider_id);
@@ -268,7 +305,7 @@ impl MarketplaceClient {
         }
         Ok(())
     }
-    
+
     /// Get known provider count
     pub async fn provider_count(&self) -> usize {
         self.known_providers.read().await.len()
@@ -319,12 +356,12 @@ mod tests {
     use super::*;
     use nebenk_core::types::{ClusterId, NodeId};
     use nebenk_identity::NodeIdentity;
-    
+
     #[tokio::test]
     async fn test_client_creation() {
         let identity = Arc::new(NodeIdentity::generate());
         let config = ClientConfig::default();
-        
+
         let client = MarketplaceClient::new(config, identity);
         assert_eq!(client.provider_count().await, 0);
     }

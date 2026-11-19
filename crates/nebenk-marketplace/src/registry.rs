@@ -1,16 +1,16 @@
 //! Marketplace registry - in-memory provider registry
 
-use crate::types::*;
 use crate::provider::ProviderHeartbeat;
-use nebenk_core::types::{ClusterId, NodeId};
+use crate::types::*;
 use nebenk_core::error::{NebenkError, Result};
+use nebenk_core::types::{ClusterId, NodeId};
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::sync::RwLock;
-use tracing::{info};
+use tracing::info;
 
 /// Registry topics (for future libp2p integration)
 pub mod topics {
@@ -87,10 +87,10 @@ pub struct RegistryConfig {
 impl Default for RegistryConfig {
     fn default() -> Self {
         Self {
-            provider_ttl_secs: 600,       // 10 minutes
-            heartbeat_ttl_secs: 120,      // 2 minutes
+            provider_ttl_secs: 600,  // 10 minutes
+            heartbeat_ttl_secs: 120, // 2 minutes
             max_providers_per_response: 50,
-            cleanup_interval_secs: 60,    // 1 minute
+            cleanup_interval_secs: 60, // 1 minute
         }
     }
 }
@@ -103,59 +103,70 @@ impl MarketplaceRegistry {
             config,
         }
     }
-    
+
     /// Handle incoming provider advertisement
     pub async fn handle_advertisement(&self, adv: ProviderAdvertisement) -> Result<()> {
         // Verify signature
         if !adv.verify() {
             return Err(NebenkError::InvalidSignature);
         }
-        
+
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs();
-        
+
         // Check if advertisement is recent
         if now.saturating_sub(adv.last_heartbeat) > self.config.provider_ttl_secs {
             return Err(NebenkError::StaleAdvertisement);
         }
-        
+
         // Store provider
-        self.providers.write().await.insert(adv.node_id, adv.clone());
-        
-        info!("Registered provider: {} (total: {})", adv.node_id, self.providers.read().await.len());
+        self.providers
+            .write()
+            .await
+            .insert(adv.node_id, adv.clone());
+
+        info!(
+            "Registered provider: {} (total: {})",
+            adv.node_id,
+            self.providers.read().await.len()
+        );
         Ok(())
     }
-    
+
     /// Handle provider heartbeat
     pub async fn handle_heartbeat(&self, hb: ProviderHeartbeat) -> Result<()> {
         let _now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs();
-        
+
         // Update heartbeat
         self.heartbeats.write().await.insert(hb.node_id, hb.clone());
-        
+
         // Update provider reputation if exists
         if let Some(provider) = self.providers.write().await.get_mut(&hb.node_id) {
             provider.last_heartbeat = hb.timestamp;
             provider.reputation = hb.reputation;
         }
-        
+
         Ok(())
     }
-    
+
     /// Handle provider list request
-    pub async fn handle_list_request(&self, request: ProviderListRequest) -> Result<ProviderListResponse> {
+    pub async fn handle_list_request(
+        &self,
+        request: ProviderListRequest,
+    ) -> Result<ProviderListResponse> {
         let providers = self.providers.read().await;
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs();
-        
-        let mut filtered: Vec<_> = providers.values()
+
+        let mut filtered: Vec<_> = providers
+            .values()
             .filter(|p| {
                 // Check TTL
                 now.saturating_sub(p.last_heartbeat) < self.config.provider_ttl_secs
@@ -164,47 +175,63 @@ impl MarketplaceRegistry {
                 // Apply filters
                 if let Some(filter) = &request.filter {
                     if let Some(min_cpu) = filter.min_cpu_cores {
-                        if p.capabilities.cpu_cores < min_cpu { return false; }
+                        if p.capabilities.cpu_cores < min_cpu {
+                            return false;
+                        }
                     }
                     if let Some(min_mem) = filter.min_memory_gb {
-                        if p.capabilities.memory_gb < min_mem { return false; }
+                        if p.capabilities.memory_gb < min_mem {
+                            return false;
+                        }
                     }
                     if let Some(min_storage) = filter.min_storage_gb {
-                        if p.capabilities.storage_gb < min_storage { return false; }
+                        if p.capabilities.storage_gb < min_storage {
+                            return false;
+                        }
                     }
                     if let Some(arch) = &filter.required_arch {
-                        if !arch.contains(&p.capabilities.cpu_arch) { return false; }
+                        if !arch.contains(&p.capabilities.cpu_arch) {
+                            return false;
+                        }
                     }
                     if let Some(features) = &filter.required_features {
-                        if !features.iter().all(|f| p.capabilities.features.contains(f)) { return false; }
+                        if !features.iter().all(|f| p.capabilities.features.contains(f)) {
+                            return false;
+                        }
                     }
                     if let Some(min_rep) = filter.min_reputation {
-                        if p.reputation.0 < min_rep { return false; }
+                        if p.reputation.0 < min_rep {
+                            return false;
+                        }
                     }
                     if let Some(max_price) = filter.max_price_cpu {
-                        if p.pricing.cpu_per_hour > max_price { return false; }
+                        if p.pricing.cpu_per_hour > max_price {
+                            return false;
+                        }
                     }
                 }
                 true
             })
             .cloned()
             .collect();
-        
+
         // Sort by reputation desc, then price asc
         filtered.sort_by(|a, b| {
-            b.reputation.0.cmp(&a.reputation.0)
+            b.reputation
+                .0
+                .cmp(&a.reputation.0)
                 .then_with(|| a.pricing.cpu_per_hour.cmp(&b.pricing.cpu_per_hour))
         });
-        
+
         // Limit results
         filtered.truncate(self.config.max_providers_per_response);
-        
+
         Ok(ProviderListResponse {
             providers: filtered,
             timestamp: now,
         })
     }
-    
+
     /// Get all active providers
     pub async fn get_providers(&self) -> Vec<ProviderAdvertisement> {
         let providers = self.providers.read().await;
@@ -212,13 +239,14 @@ impl MarketplaceRegistry {
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs();
-        
-        providers.values()
+
+        providers
+            .values()
             .filter(|p| now.saturating_sub(p.last_heartbeat) < self.config.provider_ttl_secs)
             .cloned()
             .collect()
     }
-    
+
     /// Get provider by NodeId
     pub async fn get_provider(&self, node_id: NodeId) -> Option<ProviderAdvertisement> {
         let providers = self.providers.read().await;
@@ -226,46 +254,49 @@ impl MarketplaceRegistry {
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs();
-        
-        providers.get(&node_id)
+
+        providers
+            .get(&node_id)
             .filter(|p| now.saturating_sub(p.last_heartbeat) < self.config.provider_ttl_secs)
             .cloned()
     }
-    
+
     /// Remove expired providers
     pub async fn cleanup_expired(&self) {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs();
-        
+
         // Clean providers
         let mut providers = self.providers.write().await;
         let before = providers.len();
-        providers.retain(|_, p| now.saturating_sub(p.last_heartbeat) < self.config.provider_ttl_secs);
+        providers
+            .retain(|_, p| now.saturating_sub(p.last_heartbeat) < self.config.provider_ttl_secs);
         let after = providers.len();
-        
+
         if before != after {
             info!("Cleaned up {} expired providers", before - after);
         }
-        
+
         // Clean heartbeats
         let mut heartbeats = self.heartbeats.write().await;
         heartbeats.retain(|_, h| now.saturating_sub(h.timestamp) < self.config.heartbeat_ttl_secs);
     }
-    
+
     /// Start periodic cleanup
     pub async fn start_cleanup_task(&self) {
         let registry = self.clone();
         tokio::spawn(async move {
-            let mut interval = tokio::time::interval(Duration::from_secs(registry.config.cleanup_interval_secs));
+            let mut interval =
+                tokio::time::interval(Duration::from_secs(registry.config.cleanup_interval_secs));
             loop {
                 interval.tick().await;
                 registry.cleanup_expired().await;
             }
         });
     }
-    
+
     /// Get provider count
     pub async fn provider_count(&self) -> usize {
         self.providers.read().await.len()
@@ -294,12 +325,11 @@ mod tests {
     use crate::types::*;
     use nebenk_core::types::{ClusterId, NodeId};
     use nebenk_identity::NodeIdentity;
-    
-    
+
     #[tokio::test]
     async fn test_registry_advertisement() {
         let registry = MarketplaceRegistry::default();
-        
+
         let node_id = NodeId::from_bytes([1u8; 32]);
         let cluster_id = ClusterId::new("test");
         let capabilities = DeviceCapabilities {
@@ -333,29 +363,30 @@ mod tests {
             lock_duration_secs: 86400 * 30,
             contract_address: None,
         };
-        
+
         let mut adv = ProviderAdvertisement::new(node_id, cluster_id, capabilities, pricing, stake);
-        
+
         // Sign with identity matching the node_id
-        let identity = NodeIdentity::load_or_create("/tmp/test_key_1").unwrap_or_else(|_| NodeIdentity::generate());
+        let identity = NodeIdentity::load_or_create("/tmp/test_key_1")
+            .unwrap_or_else(|_| NodeIdentity::generate());
         // Override node_id to match the generated identity
         adv.node_id = identity.node_id();
         let signing_data = adv.signing_data();
         adv.signature = identity.sign(&signing_data);
-        
+
         // Register
         registry.handle_advertisement(adv.clone()).await.unwrap();
-        
+
         // Retrieve
         let retrieved = registry.get_provider(identity.node_id()).await;
         assert!(retrieved.is_some());
         assert_eq!(retrieved.unwrap().node_id, identity.node_id());
     }
-    
+
     #[tokio::test]
     async fn test_registry_filter() {
         let registry = MarketplaceRegistry::default();
-        
+
         // Add multiple providers with matching identities
         for i in 0..5 {
             let identity = NodeIdentity::generate();
@@ -392,18 +423,22 @@ mod tests {
                 lock_duration_secs: 86400 * 30,
                 contract_address: None,
             };
-            
-            let mut adv = ProviderAdvertisement::new(node_id, cluster_id, capabilities, pricing, stake);
+
+            let mut adv =
+                ProviderAdvertisement::new(node_id, cluster_id, capabilities, pricing, stake);
             let signing_data = adv.signing_data();
             adv.signature = identity.sign(&signing_data);
-            
+
             registry.handle_advertisement(adv).await.unwrap();
         }
-        
+
         // Query with filter
         let request = ProviderListRequest {
             requester: NodeId::from_bytes([99u8; 32]),
-            timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
+            timestamp: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
             filter: Some(ProviderFilter {
                 min_cpu_cores: Some(6),
                 min_memory_gb: Some(16),
@@ -413,9 +448,9 @@ mod tests {
                 ..Default::default()
             }),
         };
-        
+
         let response = registry.handle_list_request(request).await.unwrap();
-        
+
         // Should match providers with cpu_cores >= 6 and price <= 15
         // Provider 3 (6 cores, price 14), Provider 4 (8 cores, price 16 - too expensive)
         assert!(response.providers.len() <= 2);

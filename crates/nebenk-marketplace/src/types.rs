@@ -32,19 +32,19 @@ impl std::fmt::Display for DeploymentId {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct DeviceCapabilities {
     pub cpu_cores: u32,
-    pub cpu_arch: String,          // "x86_64", "aarch64", "armv7"
-    pub os: String,                // "linux", "android", "macos", "windows"
+    pub cpu_arch: String, // "x86_64", "aarch64", "armv7"
+    pub os: String,       // "linux", "android", "macos", "windows"
     pub memory_gb: u32,
     pub storage_gb: u32,
-    pub storage_type: String,      // "ssd", "hdd", "nvme"
+    pub storage_type: String, // "ssd", "hdd", "nvme"
     pub gpu: Option<GpuInfo>,
     pub network: NetworkInfo,
-    pub features: Vec<String>,     // "wasm", "oci", "sgx", "tp"
+    pub features: Vec<String>, // "wasm", "oci", "sgx", "tp"
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct GpuInfo {
-    pub vendor: String,            // "nvidia", "amd", "intel", "apple"
+    pub vendor: String, // "nvidia", "amd", "intel", "apple"
     pub model: String,
     pub memory_gb: u32,
     pub cuda_cores: Option<u32>,
@@ -73,20 +73,20 @@ pub enum NatType {
 /// Pricing model for provider resources
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct PricingModel {
-    pub cpu_per_hour: u64,              // base token units per CPU core hour
-    pub memory_per_gb_hour: u64,        // per GB RAM hour
-    pub storage_per_gb_hour: u64,       // per GB storage hour
-    pub gpu_per_hour: Option<u64>,      // per GPU hour
-    pub egress_per_gb: u64,             // per GB egress
-    pub min_epoch_hours: u32,           // minimum deployment duration
+    pub cpu_per_hour: u64,         // base token units per CPU core hour
+    pub memory_per_gb_hour: u64,   // per GB RAM hour
+    pub storage_per_gb_hour: u64,  // per GB storage hour
+    pub gpu_per_hour: Option<u64>, // per GPU hour
+    pub egress_per_gb: u64,        // per GB egress
+    pub min_epoch_hours: u32,      // minimum deployment duration
 }
 
 /// Stake information for slashing protection
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct StakeInfo {
     pub amount: u64,
-    pub token: String,                  // "ETH", "USDC", "NEBENK"
-    pub lock_duration_secs: u64,        // lock period in seconds
+    pub token: String,                    // "ETH", "USDC", "NEBENK"
+    pub lock_duration_secs: u64,          // lock period in seconds
     pub contract_address: Option<String>, // smart contract address
 }
 
@@ -98,16 +98,16 @@ impl ReputationScore {
     pub fn new(score: u8) -> Self {
         Self(score.min(100))
     }
-    
+
     pub fn default() -> Self {
         Self(50) // New providers start at 50
     }
-    
+
     pub fn decay(&mut self, months_inactive: u32) {
         let decay = (5u8.saturating_mul(months_inactive as u8)).min(self.0);
         self.0 = self.0.saturating_sub(decay);
     }
-    
+
     pub fn is_eligible_for_premium(&self) -> bool {
         self.0 >= 75
     }
@@ -128,9 +128,9 @@ pub struct ProviderAdvertisement {
     pub pricing: PricingModel,
     pub stake: StakeInfo,
     pub reputation: ReputationScore,
-    pub registered_at: u64,             // Unix timestamp
-    pub last_heartbeat: u64,            // Unix timestamp
-    pub signature: Vec<u8>,             // Signed by node_id
+    pub registered_at: u64,  // Unix timestamp
+    pub last_heartbeat: u64, // Unix timestamp
+    pub signature: Vec<u8>,  // Signed by node_id
 }
 
 impl ProviderAdvertisement {
@@ -146,7 +146,7 @@ impl ProviderAdvertisement {
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs();
-        
+
         Self {
             node_id,
             cluster_id,
@@ -159,7 +159,7 @@ impl ProviderAdvertisement {
             signature: Vec::new(),
         }
     }
-    
+
     /// Get the data to be signed (excludes signature field)
     pub fn signing_data(&self) -> Vec<u8> {
         let mut clone = self.clone();
@@ -168,25 +168,25 @@ impl ProviderAdvertisement {
         let buf = cbor4ii::serde::to_vec(buf, &clone).unwrap_or_default();
         buf
     }
-    
+
     /// Verify the signature
     pub fn verify(&self) -> bool {
         if self.signature.is_empty() {
             return false;
         }
-        
-        use ed25519_dalek::{Verifier, VerifyingKey, Signature};
+
+        use ed25519_dalek::{Signature, Verifier, VerifyingKey};
         let verifying_key = match VerifyingKey::from_bytes(&self.node_id.0) {
             Ok(k) => k,
             Err(_) => return false,
         };
-        
+
         let sig_bytes: [u8; 64] = match self.signature.as_slice().try_into() {
             Ok(arr) => arr,
             Err(_) => return false,
         };
         let sig = Signature::from_bytes(&sig_bytes);
-        
+
         verifying_key.verify(&self.signing_data(), &sig).is_ok()
     }
 }
@@ -257,16 +257,16 @@ pub struct DeploymentManifest {
     pub deployment_id: DeploymentId,
     pub app_name: String,
     pub app_version: String,
-    pub wasm_hash: [u8; 32],            // BLAKE3 hash of app.wasm
-    pub wasm_url: String,               // IPFS/HTTP URL to fetch WASM
-    pub manifest_hash: [u8; 32],        // Hash of this manifest
+    pub wasm_hash: [u8; 32],     // BLAKE3 hash of app.wasm
+    pub wasm_url: String,        // IPFS/HTTP URL to fetch WASM
+    pub manifest_hash: [u8; 32], // Hash of this manifest
     pub requirements: ResourceRequirements,
     pub replication: ReplicationConfig,
     pub pricing: DeploymentPricing,
     pub cluster_prefs: ClusterPreferences,
     pub created_at: u64,
-    pub creator: NodeId,                // Developer's node ID
-    pub signature: Vec<u8>,             // Signed by creator
+    pub creator: NodeId,    // Developer's node ID
+    pub signature: Vec<u8>, // Signed by creator
 }
 
 impl DeploymentManifest {
@@ -285,7 +285,7 @@ impl DeploymentManifest {
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs();
-        
+
         // Compute manifest hash (without signature)
         let mut temp = Self {
             deployment_id: DeploymentId::new(),
@@ -305,7 +305,7 @@ impl DeploymentManifest {
         let buf = Vec::new();
         cbor4ii::serde::to_vec(buf.clone(), &temp).unwrap_or_default();
         temp.manifest_hash = blake3::hash(&buf).into();
-        
+
         temp
     }
 }
@@ -342,14 +342,14 @@ pub struct ProviderEarnings {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum DeploymentStatus {
-    Pending,        // Waiting for providers
-    Provisioning,   // Providers joining cluster
-    Running,        // App deployed and replicating
-    Scaling,        // Adding/removing replicas
-    Paused,         // Temporarily stopped
-    Completed,      // Finished successfully
-    Failed,         // Failed (insufficient providers, etc.)
-    Cancelled,      // Cancelled by developer
+    Pending,      // Waiting for providers
+    Provisioning, // Providers joining cluster
+    Running,      // App deployed and replicating
+    Scaling,      // Adding/removing replicas
+    Paused,       // Temporarily stopped
+    Completed,    // Finished successfully
+    Failed,       // Failed (insufficient providers, etc.)
+    Cancelled,    // Cancelled by developer
 }
 
 impl std::fmt::Display for DeploymentStatus {
@@ -377,7 +377,7 @@ mod tests {
     use super::*;
     use nebenk_core::types::{ClusterId, NodeId};
     use std::str::FromStr;
-    
+
     #[test]
     fn test_provider_advertisement_signing() {
         let node_id = NodeId::from_bytes([1u8; 32]);
@@ -413,15 +413,15 @@ mod tests {
             lock_duration_secs: 86400 * 30,
             contract_address: None,
         };
-        
+
         let adv = ProviderAdvertisement::new(node_id, cluster_id, capabilities, pricing, stake);
         let data = adv.signing_data();
         assert!(!data.is_empty());
-        
+
         // Verify unsigned fails
         assert!(!adv.verify());
     }
-    
+
     #[test]
     fn test_deployment_manifest_hash() {
         let node_id = NodeId::from_bytes([2u8; 32]);
@@ -449,20 +449,20 @@ mod tests {
             ClusterPreferences::default(),
             node_id,
         );
-        
+
         assert_ne!(manifest.manifest_hash, [0u8; 32]);
         assert_eq!(manifest.deployment_id.0.as_bytes().len(), 16);
     }
-    
+
     #[test]
     fn test_reputation_decay() {
         let mut rep = ReputationScore::new(80);
         rep.decay(1); // 1 month inactive
         assert_eq!(rep.0, 75);
-        
+
         rep.decay(10); // 10 months inactive
         assert_eq!(rep.0, 25); // min is 0, but decays by 50
-        
+
         rep.decay(100);
         assert_eq!(rep.0, 0);
     }
@@ -486,7 +486,7 @@ impl ProviderAdvertisement {
             signature: self.signature.clone(),
         }
     }
-    
+
     /// Create from network protocol message type
     pub fn from_msg(msg: nebenk_network::protocol::ProviderAdvertisementMsg) -> Self {
         Self {
@@ -516,7 +516,7 @@ impl ProviderHeartbeat {
             signature: Vec::new(),
         }
     }
-    
+
     /// Create from network protocol message type
     pub fn from_msg(msg: nebenk_network::protocol::ProviderHeartbeatMsg) -> Self {
         Self {
@@ -542,7 +542,7 @@ impl DeviceCapabilities {
             features: self.features.clone(),
         }
     }
-    
+
     pub fn from_msg(msg: nebenk_network::protocol::DeviceCapabilitiesMsg) -> Self {
         Self {
             cpu_cores: msg.cpu_cores,
@@ -567,7 +567,7 @@ impl GpuInfo {
             cuda_cores: self.cuda_cores,
         }
     }
-    
+
     pub fn from_msg(msg: nebenk_network::protocol::GpuInfoMsg) -> Self {
         Self {
             vendor: msg.vendor,
@@ -588,7 +588,7 @@ impl NetworkInfo {
             latency_ms_avg: self.latency_ms_avg,
         }
     }
-    
+
     pub fn from_msg(msg: nebenk_network::protocol::NetworkInfoMsg) -> Self {
         Self {
             public_ip: msg.public_ip,
@@ -611,7 +611,7 @@ impl NatType {
             NatType::Unknown => nebenk_network::protocol::NatTypeMsg::Unknown,
         }
     }
-    
+
     pub fn from_msg(msg: nebenk_network::protocol::NatTypeMsg) -> Self {
         match msg {
             nebenk_network::protocol::NatTypeMsg::None => NatType::None,
@@ -635,7 +635,7 @@ impl PricingModel {
             min_epoch_hours: self.min_epoch_hours,
         }
     }
-    
+
     pub fn from_msg(msg: nebenk_network::protocol::PricingModelMsg) -> Self {
         Self {
             cpu_per_hour: msg.cpu_per_hour,
@@ -657,7 +657,7 @@ impl StakeInfo {
             contract_address: self.contract_address.clone(),
         }
     }
-    
+
     pub fn from_msg(msg: nebenk_network::protocol::StakeInfoMsg) -> Self {
         Self {
             amount: msg.amount,
@@ -672,7 +672,7 @@ impl ReputationScore {
     pub fn to_msg(&self) -> nebenk_network::protocol::ReputationScoreMsg {
         nebenk_network::protocol::ReputationScoreMsg(self.0)
     }
-    
+
     pub fn from_msg(msg: nebenk_network::protocol::ReputationScoreMsg) -> Self {
         Self(msg.0)
     }
@@ -689,7 +689,7 @@ impl ResourceRequirements {
             gpu_required: self.gpu_required,
         }
     }
-    
+
     pub fn from_msg(msg: nebenk_network::protocol::ResourceRequirementsMsg) -> Self {
         Self {
             min_cpu_cores: msg.min_cpu_cores,

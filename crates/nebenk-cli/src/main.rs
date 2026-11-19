@@ -2,28 +2,25 @@ use clap::{Parser, Subcommand};
 
 use nebenk_core::types::{ClusterId, NodeId};
 use nebenk_identity::NodeIdentity;
-use nebenk_runtime::{NodeConfig, NodeRuntime};
-use nebenk_storage::SqliteStore;
-use nebenk_wasm::{KvCommand, KvQuery, KvQueryResult, NativeKvEngine};
 use nebenk_marketplace::{
-    client::{MarketplaceClient, ClientConfig},
+    client::{ClientConfig, MarketplaceClient},
     provider::{MarketplaceProvider, ProviderConfig},
     registry::{MarketplaceRegistry, ProviderFilter, ProviderListRequest},
     reputation::ReputationEngine,
-    settlement::{SettlementEngine, ProviderEpochMetrics},
+    settlement::{ProviderEpochMetrics, SettlementEngine},
     types::*,
 };
-use nebenk_network::{
-    marketplace::{MarketplaceEvent, MarketplaceNetwork},
-    
-};
+use nebenk_network::marketplace::{MarketplaceEvent, MarketplaceNetwork};
+use nebenk_runtime::{NodeConfig, NodeRuntime};
+use nebenk_storage::SqliteStore;
+use nebenk_wasm::{KvCommand, KvQuery, KvQueryResult, NativeKvEngine};
 
 use libp2p::Multiaddr;
-use uuid::Uuid;
 use std::fs;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::sync::mpsc;
+use uuid::Uuid;
 
 #[derive(Parser)]
 #[command(name = "nebenk")]
@@ -416,7 +413,10 @@ async fn handle_marketplace_command(
             let _client = MarketplaceClient::new(client_config, identity.clone());
 
             println!("Deploying application: {}", app.display());
-            println!("Requirements: {} CPU, {} GB RAM, {} GB storage", cpu, mem, storage);
+            println!(
+                "Requirements: {} CPU, {} GB RAM, {} GB storage",
+                cpu, mem, storage
+            );
             println!("Replicas: {}", replicas);
             println!("Max CPU price: {}", max_cpu_price);
             println!("Cluster: {}", cluster_id);
@@ -467,29 +467,36 @@ async fn handle_marketplace_command(
             println!("Reputation Score: {}/100", score.0);
         }
 
-        MarketplaceCommands::Network { listen, bootstrap: _ } => {
-            let listen_addr: Multiaddr = listen.parse()
+        MarketplaceCommands::Network {
+            listen,
+            bootstrap: _,
+        } => {
+            let listen_addr: Multiaddr = listen
+                .parse()
                 .map_err(|e| anyhow::anyhow!("Invalid listen address: {}", e))?;
-            
+
             let key_path = data_dir.join("node.key");
             let identity = NodeIdentity::load_or_create(key_path)?;
             let keypair = identity.to_libp2p_keypair();
-            
+
             let (_cmd_tx, cmd_rx) = mpsc::unbounded_channel();
             let (evt_tx, mut evt_rx) = mpsc::unbounded_channel();
-            
-            let network = MarketplaceNetwork::new(keypair, cmd_rx, evt_tx).map_err(|e| anyhow::anyhow!(e))?;
-            
+
+            let network =
+                MarketplaceNetwork::new(keypair, cmd_rx, evt_tx).map_err(|e| anyhow::anyhow!(e))?;
+
             println!("Starting marketplace network on {}", listen_addr);
             println!("Node ID: {}", identity.node_id());
-            
+
             // Handle events in background
             tokio::spawn(async move {
                 while let Some(event) = evt_rx.recv().await {
                     match event {
                         MarketplaceEvent::ProviderAdvertisement(adv) => {
-                            println!("New provider: {} - {} CPU, {} GB RAM", 
-                                adv.node_id, adv.capabilities.cpu_cores, adv.capabilities.memory_gb);
+                            println!(
+                                "New provider: {} - {} CPU, {} GB RAM",
+                                adv.node_id, adv.capabilities.cpu_cores, adv.capabilities.memory_gb
+                            );
                         }
                         MarketplaceEvent::ProviderHeartbeat(hb) => {
                             println!("Heartbeat from: {}", hb.node_id);
@@ -498,7 +505,7 @@ async fn handle_marketplace_command(
                     }
                 }
             });
-            
+
             // Run network (this blocks)
             network.run(listen_addr).await?;
         }
@@ -534,15 +541,28 @@ async fn handle_settlement_command(
 
             let dep_id = DeploymentId(Uuid::parse_str(&deployment_id)?);
             let escrow = settlement
-                .create_escrow(dep_id, dev_id, provider_ids, token, epochs, amount_per_epoch)
+                .create_escrow(
+                    dep_id,
+                    dev_id,
+                    provider_ids,
+                    token,
+                    epochs,
+                    amount_per_epoch,
+                )
                 .await?;
             println!("Escrow created!");
             println!("Deployment ID: {}", escrow.deployment_id);
-            println!("Total deposited: {} {}", escrow.total_deposited, escrow.token);
+            println!(
+                "Total deposited: {} {}",
+                escrow.total_deposited, escrow.token
+            );
             println!("Epochs funded: {}", escrow.epochs_funded);
         }
 
-        SettlementCommands::Settle { deployment_id, uptime } => {
+        SettlementCommands::Settle {
+            deployment_id,
+            uptime,
+        } => {
             let dep_id = DeploymentId(Uuid::parse_str(&deployment_id)?);
             let metrics = vec![ProviderEpochMetrics {
                 provider_node_id: developer,

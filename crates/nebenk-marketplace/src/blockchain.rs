@@ -4,11 +4,13 @@
 
 #[cfg(feature = "blockchain")]
 mod blockchain_impl {
+    use crate::settlement::{
+        EpochSettlement, EscrowAccount, ProviderEpochMetrics, SettlementConfig, SettlementEngine,
+    };
     use crate::types::*;
-    use crate::settlement::{SettlementEngine, SettlementConfig, ProviderEpochMetrics, EscrowAccount, EpochSettlement};
+    use async_trait::async_trait;
     use nebenk_core::error::{NebenkError, Result};
     use nebenk_core::types::NodeId;
-    use async_trait::async_trait;
     use serde::{Deserialize, Serialize};
     use std::collections::HashMap;
     use std::sync::Arc;
@@ -162,15 +164,17 @@ mod blockchain_impl {
     impl BlockchainClient {
         /// Create a new blockchain client
         pub fn new(config: BlockchainConfig) -> Result<Self> {
-            let provider = ProviderBuilder::new()
-                .on_http(config.rpc_url.parse().map_err(|e| {
-                    NebenkError::Blockchain(format!("Invalid RPC URL: {}", e))
-                })?);
+            let provider = ProviderBuilder::new().on_http(
+                config
+                    .rpc_url
+                    .parse()
+                    .map_err(|e| NebenkError::Blockchain(format!("Invalid RPC URL: {}", e)))?,
+            );
 
             let wallet = if let Some(pk) = &config.private_key {
-                let signer = pk.parse::<PrivateKeySigner>().map_err(|e| {
-                    NebenkError::Blockchain(format!("Invalid private key: {}", e))
-                })?;
+                let signer = pk
+                    .parse::<PrivateKeySigner>()
+                    .map_err(|e| NebenkError::Blockchain(format!("Invalid private key: {}", e)))?;
                 Some(EthereumWallet::from(signer))
             } else {
                 None
@@ -208,15 +212,17 @@ mod blockchain_impl {
         /// Get the contract instance
         fn contract(&self) -> Result<&INeonEscrow<RootProvider<Http<Client>>>> {
             self.contract.as_ref().ok_or_else(|| {
-                NebenkError::Blockchain("Contract not initialized. Set contract_address in config.".into())
+                NebenkError::Blockchain(
+                    "Contract not initialized. Set contract_address in config.".into(),
+                )
             })
         }
 
         /// Get the provider
         fn provider(&self) -> Result<&RootProvider<Http<Client>>> {
-            self.provider.as_ref().ok_or_else(|| {
-                NebenkError::Blockchain("Provider not initialized".into())
-            })
+            self.provider
+                .as_ref()
+                .ok_or_else(|| NebenkError::Blockchain("Provider not initialized".into()))
         }
 
         /// Convert DeploymentId to bytes32
@@ -244,7 +250,8 @@ mod blockchain_impl {
             estimated_cost_per_epoch: u64,
         ) -> Result<()> {
             let contract = self.contract()?;
-            let provider_addresses: Vec<Address> = providers.into_iter()
+            let provider_addresses: Vec<Address> = providers
+                .into_iter()
                 .map(Self::node_id_to_address)
                 .collect();
 
@@ -257,7 +264,10 @@ mod blockchain_impl {
             );
 
             let receipt = self.send_transaction(tx).await?;
-            info!("Created escrow on-chain: deployment={}, tx={:?}", deployment_id, receipt.transaction_hash);
+            info!(
+                "Created escrow on-chain: deployment={}, tx={:?}",
+                deployment_id, receipt.transaction_hash
+            );
             Ok(())
         }
 
@@ -269,7 +279,10 @@ mod blockchain_impl {
                 U256::from(amount),
             );
             let receipt = self.send_transaction(tx).await?;
-            info!("Deposited {} to escrow {}: tx={:?}", amount, deployment_id, receipt.transaction_hash);
+            info!(
+                "Deposited {} to escrow {}: tx={:?}",
+                amount, deployment_id, receipt.transaction_hash
+            );
             Ok(())
         }
 
@@ -281,17 +294,22 @@ mod blockchain_impl {
             provider_metrics: Vec<ProviderEpochMetrics>,
         ) -> Result<Vec<EpochSettlement>> {
             let contract = self.contract()?;
-            
+
             // Convert metrics to contract format
-            let metrics: Vec<_> = provider_metrics.into_iter().map(|m| (
-                Self::node_id_to_address(m.provider_node_id),
-                U256::from((m.uptime_percentage * 100.0) as u64), // Convert to basis points
-                U256::from(m.replication_lag_ms),
-                m.data_corrupted,
-                m.malicious_detected,
-                U256::from(m.operations_processed),
-                U256::from(m.bytes_transferred),
-            )).collect();
+            let metrics: Vec<_> = provider_metrics
+                .into_iter()
+                .map(|m| {
+                    (
+                        Self::node_id_to_address(m.provider_node_id),
+                        U256::from((m.uptime_percentage * 100.0) as u64), // Convert to basis points
+                        U256::from(m.replication_lag_ms),
+                        m.data_corrupted,
+                        m.malicious_detected,
+                        U256::from(m.operations_processed),
+                        U256::from(m.bytes_transferred),
+                    )
+                })
+                .collect();
 
             let tx = contract.settleEpoch(
                 Self::deployment_id_to_bytes32(deployment_id),
@@ -300,7 +318,10 @@ mod blockchain_impl {
             );
 
             let receipt = self.send_transaction(tx).await?;
-            info!("Settled epoch {} for deployment {}: tx={:?}", epoch, deployment_id, receipt.transaction_hash);
+            info!(
+                "Settled epoch {} for deployment {}: tx={:?}",
+                epoch, deployment_id, receipt.transaction_hash
+            );
 
             // In a real implementation, we'd parse the event logs to get the settlements
             // For now, return empty vec
@@ -312,7 +333,10 @@ mod blockchain_impl {
             let contract = self.contract()?;
             let tx = contract.depositStake(token, U256::from(amount));
             let receipt = self.send_transaction(tx).await?;
-            info!("Deposited stake: {} tokens, tx={:?}", amount, receipt.transaction_hash);
+            info!(
+                "Deposited stake: {} tokens, tx={:?}",
+                amount, receipt.transaction_hash
+            );
             Ok(())
         }
 
@@ -321,7 +345,10 @@ mod blockchain_impl {
             let contract = self.contract()?;
             let tx = contract.lockStake(U256::from(epochs));
             let receipt = self.send_transaction(tx).await?;
-            info!("Locked stake for {} epochs, tx={:?}", epochs, receipt.transaction_hash);
+            info!(
+                "Locked stake for {} epochs, tx={:?}",
+                epochs, receipt.transaction_hash
+            );
             Ok(())
         }
 
@@ -339,7 +366,10 @@ mod blockchain_impl {
             let contract = self.contract()?;
             let tx = contract.requestWithdrawal(U256::from(amount));
             let receipt = self.send_transaction(tx).await?;
-            info!("Requested withdrawal: {} tokens, tx={:?}", amount, receipt.transaction_hash);
+            info!(
+                "Requested withdrawal: {} tokens, tx={:?}",
+                amount, receipt.transaction_hash
+            );
             Ok(())
         }
 
@@ -348,7 +378,10 @@ mod blockchain_impl {
             let contract = self.contract()?;
             let tx = contract.executeWithdrawal(U256::from(amount));
             let receipt = self.send_transaction(tx).await?;
-            info!("Executed withdrawal: {} tokens, tx={:?}", amount, receipt.transaction_hash);
+            info!(
+                "Executed withdrawal: {} tokens, tx={:?}",
+                amount, receipt.transaction_hash
+            );
             Ok(())
         }
 
@@ -357,25 +390,35 @@ mod blockchain_impl {
             let contract = self.contract()?;
             let tx = contract.closeEscrow(Self::deployment_id_to_bytes32(deployment_id));
             let receipt = self.send_transaction(tx).await?;
-            info!("Closed escrow {}: tx={:?}", deployment_id, receipt.transaction_hash);
+            info!(
+                "Closed escrow {}: tx={:?}",
+                deployment_id, receipt.transaction_hash
+            );
             Ok(())
         }
 
         /// Get escrow info from chain
         pub async fn get_escrow(&self, deployment_id: DeploymentId) -> Result<EscrowAccount> {
             let contract = self.contract()?;
-            let result = contract.getEscrow(Self::deployment_id_to_bytes32(deployment_id)).call().await
+            let result = contract
+                .getEscrow(Self::deployment_id_to_bytes32(deployment_id))
+                .call()
+                .await
                 .map_err(|e| NebenkError::Blockchain(format!("Call failed: {}", e)))?;
 
             Ok(EscrowAccount {
                 deployment_id,
                 developer_node_id: Self::address_to_node_id(result.developer),
-                provider_node_ids: result.providers.into_iter()
+                provider_node_ids: result
+                    .providers
+                    .into_iter()
                     .map(Self::address_to_node_id)
                     .collect(),
                 token: format!("{:?}", result.token), // Would need proper token resolution
                 total_deposited: result.totalDeposited.to::<u64>(),
-                total_paid: U256::from(result.totalDeposited).saturating_sub(result.currentBalance).to::<u64>(),
+                total_paid: U256::from(result.totalDeposited)
+                    .saturating_sub(result.currentBalance)
+                    .to::<u64>(),
                 total_slashed: 0, // Not returned by contract
                 current_balance: result.currentBalance.to::<u64>(),
                 epochs_funded: result.epochsFunded,
@@ -395,7 +438,10 @@ mod blockchain_impl {
         /// Get provider stake from chain
         pub async fn get_provider_stake(&self, provider: NodeId) -> Result<ProviderStake> {
             let contract = self.contract()?;
-            let result = contract.getProviderStake(Self::node_id_to_address(provider)).call().await
+            let result = contract
+                .getProviderStake(Self::node_id_to_address(provider))
+                .call()
+                .await
                 .map_err(|e| NebenkError::Blockchain(format!("Call failed: {}", e)))?;
 
             Ok(ProviderStake {
@@ -414,14 +460,19 @@ mod blockchain_impl {
             tx: INeonEscrow::createEscrowCall,
         ) -> Result<alloy::rpc::types::TransactionReceipt> {
             let provider = self.provider()?;
-            let wallet = self.wallet.as_ref().ok_or_else(|| {
-                NebenkError::Blockchain("Wallet not configured".into())
-            })?;
+            let wallet = self
+                .wallet
+                .as_ref()
+                .ok_or_else(|| NebenkError::Blockchain("Wallet not configured".into()))?;
 
-            let pending = tx.send(wallet).await
+            let pending = tx
+                .send(wallet)
+                .await
                 .map_err(|e| NebenkError::Blockchain(format!("Send failed: {}", e)))?;
-            
-            let receipt = pending.get_receipt(self.config.confirmations).await
+
+            let receipt = pending
+                .get_receipt(self.config.confirmations)
+                .await
                 .map_err(|e| NebenkError::Blockchain(format!("Receipt failed: {}", e)))?;
 
             Ok(receipt)
@@ -442,7 +493,10 @@ mod blockchain_impl {
     }
 
     impl OnChainSettlementEngine {
-        pub fn new(local_config: SettlementConfig, blockchain_config: BlockchainConfig) -> Result<Self> {
+        pub fn new(
+            local_config: SettlementConfig,
+            blockchain_config: BlockchainConfig,
+        ) -> Result<Self> {
             let blockchain = if blockchain_config.contract_address.is_some() {
                 Some(BlockchainClient::new(blockchain_config.clone())?)
             } else {
@@ -467,20 +521,31 @@ mod blockchain_impl {
             estimated_cost_per_epoch: u64,
         ) -> Result<EscrowAccount> {
             // Create locally first
-            let escrow = self.local_engine.create_escrow(
-                deployment_id,
-                developer,
-                providers.clone(),
-                token.clone(),
-                epochs_to_fund,
-                estimated_cost_per_epoch,
-            ).await?;
+            let escrow = self
+                .local_engine
+                .create_escrow(
+                    deployment_id,
+                    developer,
+                    providers.clone(),
+                    token.clone(),
+                    epochs_to_fund,
+                    estimated_cost_per_epoch,
+                )
+                .await?;
 
             // Create on-chain if configured
             if let Some(bc) = &self.blockchain {
                 // Resolve token address from symbol (simplified)
                 let token_address = self.resolve_token_address(&token)?;
-                bc.create_escrow(deployment_id, developer, providers, token_address, epochs_to_fund, estimated_cost_per_epoch).await?;
+                bc.create_escrow(
+                    deployment_id,
+                    developer,
+                    providers,
+                    token_address,
+                    epochs_to_fund,
+                    estimated_cost_per_epoch,
+                )
+                .await?;
             }
 
             Ok(escrow)
@@ -493,7 +558,10 @@ mod blockchain_impl {
             metrics: Vec<ProviderEpochMetrics>,
         ) -> Result<Vec<EpochSettlement>> {
             // Settle locally
-            let settlements = self.local_engine.settle_epoch(deployment_id, metrics.clone()).await?;
+            let settlements = self
+                .local_engine
+                .settle_epoch(deployment_id, metrics.clone())
+                .await?;
 
             // Settle on-chain if configured
             if let Some(bc) = &self.blockchain {
@@ -507,8 +575,12 @@ mod blockchain_impl {
         /// Calculate current epoch based on escrow creation time
         async fn calculate_current_epoch(&self, deployment_id: DeploymentId) -> Result<u32> {
             if let Some(escrow) = self.local_engine.get_escrow(deployment_id).await {
-                let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-                let epoch = (now - escrow.created_at) / self.local_engine.config.epoch_duration_secs;
+                let now = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs();
+                let epoch =
+                    (now - escrow.created_at) / self.local_engine.config.epoch_duration_secs;
                 Ok(epoch as u32)
             } else {
                 Err(NebenkError::EscrowNotFound)
@@ -518,10 +590,19 @@ mod blockchain_impl {
         fn resolve_token_address(&self, symbol: &str) -> Result<Address> {
             // In production, this would query a token registry
             match symbol.to_uppercase().as_str() {
-                "USDC" => Ok("0xA0b86a33E6441b8c4C8C8C8C8C8C8C8C8C8C8C8C".parse().unwrap()),
-                "USDT" => Ok("0xdAC17F958D2ee523a2206206994597C13D831ec7".parse().unwrap()),
-                "ETH" => Ok("0x0000000000000000000000000000000000000000".parse().unwrap()),
-                _ => Err(NebenkError::Blockchain(format!("Unknown token: {}", symbol))),
+                "USDC" => Ok("0xA0b86a33E6441b8c4C8C8C8C8C8C8C8C8C8C8C8C"
+                    .parse()
+                    .unwrap()),
+                "USDT" => Ok("0xdAC17F958D2ee523a2206206994597C13D831ec7"
+                    .parse()
+                    .unwrap()),
+                "ETH" => Ok("0x0000000000000000000000000000000000000000"
+                    .parse()
+                    .unwrap()),
+                _ => Err(NebenkError::Blockchain(format!(
+                    "Unknown token: {}",
+                    symbol
+                ))),
             }
         }
 
@@ -565,7 +646,7 @@ mod blockchain_impl {
         fn test_deployment_id_to_bytes32() {
             let deployment_id = DeploymentId::new();
             let bytes32 = BlockchainClient::deployment_id_to_bytes32(deployment_id);
-            
+
             // Check first 16 bytes match UUID
             assert_eq!(&bytes32[..16], deployment_id.0.as_bytes());
         }
@@ -574,7 +655,7 @@ mod blockchain_impl {
         fn test_node_id_to_address() {
             let node_id = NodeId::from_bytes([1u8; 32]);
             let address = BlockchainClient::node_id_to_address(node_id);
-            
+
             // Check first 20 bytes match
             assert_eq!(address.as_slice(), &[1u8; 20]);
         }
@@ -583,7 +664,7 @@ mod blockchain_impl {
         fn test_address_to_node_id() {
             let address = Address::from([2u8; 20]);
             let node_id = BlockchainClient::address_to_node_id(address);
-            
+
             assert_eq!(&node_id.0[..20], &[2u8; 20]);
         }
     }
@@ -642,15 +723,22 @@ pub mod stub {
 
     impl BlockchainClient {
         pub fn new(_config: BlockchainConfig) -> Result<Self> {
-            Err(NebenkError::Blockchain("Blockchain feature not enabled. Enable 'blockchain' feature in Cargo.toml".into()))
+            Err(NebenkError::Blockchain(
+                "Blockchain feature not enabled. Enable 'blockchain' feature in Cargo.toml".into(),
+            ))
         }
     }
 
     pub struct OnChainSettlementEngine;
 
     impl OnChainSettlementEngine {
-        pub fn new(_local_config: crate::settlement::SettlementConfig, _blockchain_config: BlockchainConfig) -> Result<Self> {
-            Err(NebenkError::Blockchain("Blockchain feature not enabled. Enable 'blockchain' feature in Cargo.toml".into()))
+        pub fn new(
+            _local_config: crate::settlement::SettlementConfig,
+            _blockchain_config: BlockchainConfig,
+        ) -> Result<Self> {
+            Err(NebenkError::Blockchain(
+                "Blockchain feature not enabled. Enable 'blockchain' feature in Cargo.toml".into(),
+            ))
         }
     }
 }

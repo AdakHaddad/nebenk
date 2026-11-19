@@ -6,17 +6,16 @@ pub mod transport;
 
 pub use handshake::{perform_client_handshake, perform_server_handshake, HandshakeResult};
 pub use marketplace::{
-    MarketplaceBehaviour, MarketplaceBehaviourEvent, MarketplaceCommand, MarketplaceEvent,
-    MarketplaceNetwork, MARKETPLACE_KAD_PROTOCOL, topics,
+    topics, MarketplaceBehaviour, MarketplaceBehaviourEvent, MarketplaceCommand, MarketplaceEvent,
+    MarketplaceNetwork, MARKETPLACE_KAD_PROTOCOL,
 };
 pub use peer::{P2pListener, P2pPeer};
 pub use protocol::{
-    ClusterMember, DeviceCapabilitiesMsg, DeploymentAcceptanceMsg, DeploymentId,
-    DeploymentOfferMsg, DeploymentManifestMsg, GpuInfoMsg, Heartbeat, HeartbeatAck,
-    NatTypeMsg, NetworkMessage, NetworkInfoMsg, NodeRole, NodeState, PricingModelMsg,
+    ClusterMember, ClusterPreferencesMsg, DeploymentAcceptanceMsg, DeploymentId,
+    DeploymentManifestMsg, DeploymentOfferMsg, DeviceCapabilitiesMsg, GpuInfoMsg, Heartbeat,
+    HeartbeatAck, NatTypeMsg, NetworkInfoMsg, NetworkMessage, NodeRole, NodeState, PricingModelMsg,
     ProviderAdvertisementMsg, ProviderFilterMsg, ProviderHeartbeatMsg, ProviderListRequestMsg,
     ProviderListResponseMsg, ReputationScoreMsg, ResourceRequirementsMsg, StakeInfoMsg,
-    ClusterPreferencesMsg,
 };
 pub use transport::P2pFramedStream;
 
