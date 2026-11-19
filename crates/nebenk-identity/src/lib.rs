@@ -84,6 +84,12 @@ impl NodeIdentity {
         signature.to_bytes().to_vec()
     }
 
+    /// Get the libp2p keypair for networking
+    pub fn to_libp2p_keypair(&self) -> libp2p::identity::Keypair {
+        let secret_bytes = self.signing_key.to_bytes();
+        libp2p::identity::Keypair::ed25519_from_bytes(secret_bytes).expect("valid ed25519 key")
+    }
+
     /// Verify a signature against a given NodeId.
     pub fn verify(node_id: &NodeId, message: &[u8], signature_bytes: &[u8]) -> Result<()> {
         let verifying_key = VerifyingKey::from_bytes(node_id.as_bytes()).map_err(|e| {

@@ -1,6 +1,8 @@
 //! Marketplace core types
 
+use crate::provider::ProviderHeartbeat;
 use nebenk_core::types::{ClusterId, NodeId};
+use nebenk_network::protocol;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -462,5 +464,239 @@ mod tests {
         
         rep.decay(100);
         assert_eq!(rep.0, 0);
+    }
+}
+
+// Conversion functions for network protocol types
+
+// Conversion functions for network protocol types
+impl ProviderAdvertisement {
+    /// Convert to network protocol message type
+    pub fn to_msg(&self) -> nebenk_network::protocol::ProviderAdvertisementMsg {
+        nebenk_network::protocol::ProviderAdvertisementMsg {
+            node_id: self.node_id,
+            cluster_id: self.cluster_id.clone(),
+            capabilities: self.capabilities.to_msg(),
+            pricing: self.pricing.to_msg(),
+            stake: self.stake.to_msg(),
+            reputation: self.reputation.to_msg(),
+            registered_at: self.registered_at,
+            last_heartbeat: self.last_heartbeat,
+            signature: self.signature.clone(),
+        }
+    }
+    
+    /// Create from network protocol message type
+    pub fn from_msg(msg: nebenk_network::protocol::ProviderAdvertisementMsg) -> Self {
+        Self {
+            node_id: msg.node_id,
+            cluster_id: msg.cluster_id,
+            capabilities: DeviceCapabilities::from_msg(msg.capabilities),
+            pricing: PricingModel::from_msg(msg.pricing),
+            stake: StakeInfo::from_msg(msg.stake),
+            reputation: ReputationScore::from_msg(msg.reputation),
+            registered_at: msg.registered_at,
+            last_heartbeat: msg.last_heartbeat,
+            signature: msg.signature,
+        }
+    }
+}
+
+impl ProviderHeartbeat {
+    /// Convert to network protocol message type
+    pub fn to_msg(&self) -> nebenk_network::protocol::ProviderHeartbeatMsg {
+        nebenk_network::protocol::ProviderHeartbeatMsg {
+            node_id: self.node_id,
+            timestamp: self.timestamp,
+            reputation: self.reputation.to_msg(),
+            active_deployments: self.active_deployments,
+            cpu_usage_percent: 0.0,
+            memory_usage_percent: 0.0,
+            signature: Vec::new(),
+        }
+    }
+    
+    /// Create from network protocol message type
+    pub fn from_msg(msg: nebenk_network::protocol::ProviderHeartbeatMsg) -> Self {
+        Self {
+            node_id: msg.node_id,
+            timestamp: msg.timestamp,
+            active_deployments: msg.active_deployments,
+            reputation: ReputationScore::from_msg(msg.reputation),
+        }
+    }
+}
+
+impl DeviceCapabilities {
+    pub fn to_msg(&self) -> nebenk_network::protocol::DeviceCapabilitiesMsg {
+        nebenk_network::protocol::DeviceCapabilitiesMsg {
+            cpu_cores: self.cpu_cores,
+            cpu_arch: self.cpu_arch.clone(),
+            os: self.os.clone(),
+            memory_gb: self.memory_gb,
+            storage_gb: self.storage_gb,
+            storage_type: self.storage_type.clone(),
+            gpu: self.gpu.as_ref().map(|g| g.to_msg()),
+            network: self.network.to_msg(),
+            features: self.features.clone(),
+        }
+    }
+    
+    pub fn from_msg(msg: nebenk_network::protocol::DeviceCapabilitiesMsg) -> Self {
+        Self {
+            cpu_cores: msg.cpu_cores,
+            cpu_arch: msg.cpu_arch,
+            os: msg.os,
+            memory_gb: msg.memory_gb,
+            storage_gb: msg.storage_gb,
+            storage_type: msg.storage_type,
+            gpu: msg.gpu.map(|g| GpuInfo::from_msg(g)),
+            network: NetworkInfo::from_msg(msg.network),
+            features: msg.features,
+        }
+    }
+}
+
+impl GpuInfo {
+    pub fn to_msg(&self) -> nebenk_network::protocol::GpuInfoMsg {
+        nebenk_network::protocol::GpuInfoMsg {
+            vendor: self.vendor.clone(),
+            model: self.model.clone(),
+            memory_gb: self.memory_gb,
+            cuda_cores: self.cuda_cores,
+        }
+    }
+    
+    pub fn from_msg(msg: nebenk_network::protocol::GpuInfoMsg) -> Self {
+        Self {
+            vendor: msg.vendor,
+            model: msg.model,
+            memory_gb: msg.memory_gb,
+            cuda_cores: msg.cuda_cores,
+        }
+    }
+}
+
+impl NetworkInfo {
+    pub fn to_msg(&self) -> nebenk_network::protocol::NetworkInfoMsg {
+        nebenk_network::protocol::NetworkInfoMsg {
+            public_ip: self.public_ip.clone(),
+            nat_type: self.nat_type.to_msg(),
+            bandwidth_mbps_up: self.bandwidth_mbps_up,
+            bandwidth_mbps_down: self.bandwidth_mbps_down,
+            latency_ms_avg: self.latency_ms_avg,
+        }
+    }
+    
+    pub fn from_msg(msg: nebenk_network::protocol::NetworkInfoMsg) -> Self {
+        Self {
+            public_ip: msg.public_ip,
+            nat_type: NatType::from_msg(msg.nat_type),
+            bandwidth_mbps_up: msg.bandwidth_mbps_up,
+            bandwidth_mbps_down: msg.bandwidth_mbps_down,
+            latency_ms_avg: msg.latency_ms_avg,
+        }
+    }
+}
+
+impl NatType {
+    pub fn to_msg(&self) -> nebenk_network::protocol::NatTypeMsg {
+        match self {
+            NatType::None => nebenk_network::protocol::NatTypeMsg::None,
+            NatType::FullCone => nebenk_network::protocol::NatTypeMsg::FullCone,
+            NatType::RestrictedCone => nebenk_network::protocol::NatTypeMsg::RestrictedCone,
+            NatType::PortRestrictedCone => nebenk_network::protocol::NatTypeMsg::PortRestrictedCone,
+            NatType::Symmetric => nebenk_network::protocol::NatTypeMsg::Symmetric,
+            NatType::Unknown => nebenk_network::protocol::NatTypeMsg::Unknown,
+        }
+    }
+    
+    pub fn from_msg(msg: nebenk_network::protocol::NatTypeMsg) -> Self {
+        match msg {
+            nebenk_network::protocol::NatTypeMsg::None => NatType::None,
+            nebenk_network::protocol::NatTypeMsg::FullCone => NatType::FullCone,
+            nebenk_network::protocol::NatTypeMsg::RestrictedCone => NatType::RestrictedCone,
+            nebenk_network::protocol::NatTypeMsg::PortRestrictedCone => NatType::PortRestrictedCone,
+            nebenk_network::protocol::NatTypeMsg::Symmetric => NatType::Symmetric,
+            nebenk_network::protocol::NatTypeMsg::Unknown => NatType::Unknown,
+        }
+    }
+}
+
+impl PricingModel {
+    pub fn to_msg(&self) -> nebenk_network::protocol::PricingModelMsg {
+        nebenk_network::protocol::PricingModelMsg {
+            cpu_per_hour: self.cpu_per_hour,
+            memory_per_gb_hour: self.memory_per_gb_hour,
+            storage_per_gb_hour: self.storage_per_gb_hour,
+            gpu_per_hour: self.gpu_per_hour,
+            egress_per_gb: self.egress_per_gb,
+            min_epoch_hours: self.min_epoch_hours,
+        }
+    }
+    
+    pub fn from_msg(msg: nebenk_network::protocol::PricingModelMsg) -> Self {
+        Self {
+            cpu_per_hour: msg.cpu_per_hour,
+            memory_per_gb_hour: msg.memory_per_gb_hour,
+            storage_per_gb_hour: msg.storage_per_gb_hour,
+            gpu_per_hour: msg.gpu_per_hour,
+            egress_per_gb: msg.egress_per_gb,
+            min_epoch_hours: msg.min_epoch_hours,
+        }
+    }
+}
+
+impl StakeInfo {
+    pub fn to_msg(&self) -> nebenk_network::protocol::StakeInfoMsg {
+        nebenk_network::protocol::StakeInfoMsg {
+            amount: self.amount,
+            token: self.token.clone(),
+            lock_duration_secs: self.lock_duration_secs,
+            contract_address: self.contract_address.clone(),
+        }
+    }
+    
+    pub fn from_msg(msg: nebenk_network::protocol::StakeInfoMsg) -> Self {
+        Self {
+            amount: msg.amount,
+            token: msg.token,
+            lock_duration_secs: msg.lock_duration_secs,
+            contract_address: msg.contract_address,
+        }
+    }
+}
+
+impl ReputationScore {
+    pub fn to_msg(&self) -> nebenk_network::protocol::ReputationScoreMsg {
+        nebenk_network::protocol::ReputationScoreMsg(self.0)
+    }
+    
+    pub fn from_msg(msg: nebenk_network::protocol::ReputationScoreMsg) -> Self {
+        Self(msg.0)
+    }
+}
+
+impl ResourceRequirements {
+    pub fn to_msg(&self) -> nebenk_network::protocol::ResourceRequirementsMsg {
+        nebenk_network::protocol::ResourceRequirementsMsg {
+            min_cpu_cores: self.min_cpu_cores,
+            min_memory_gb: self.min_memory_gb,
+            min_storage_gb: self.min_storage_gb,
+            required_arch: self.required_arch.clone(),
+            required_features: self.required_features.clone(),
+            gpu_required: self.gpu_required,
+        }
+    }
+    
+    pub fn from_msg(msg: nebenk_network::protocol::ResourceRequirementsMsg) -> Self {
+        Self {
+            min_cpu_cores: msg.min_cpu_cores,
+            min_memory_gb: msg.min_memory_gb,
+            min_storage_gb: msg.min_storage_gb,
+            required_arch: msg.required_arch,
+            required_features: msg.required_features,
+            gpu_required: msg.gpu_required,
+        }
     }
 }

@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+use futures_util::StreamExt;
 use nebenk_core::types::{ClusterId, NodeId};
 use nebenk_identity::NodeIdentity;
 use nebenk_runtime::{NodeConfig, NodeRuntime};
@@ -12,10 +13,17 @@ use nebenk_marketplace::{
     settlement::{SettlementEngine, ProviderEpochMetrics},
     types::*,
 };
+use nebenk_network::{
+    marketplace::{MarketplaceCommand, MarketplaceEvent, MarketplaceNetwork},
+    protocol::ProviderAdvertisementMsg,
+};
+use libp2p::identity::Keypair;
+use libp2p::Multiaddr;
 use uuid::Uuid;
 use std::fs;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
+use tokio::sync::mpsc;
 
 #[derive(Parser)]
 #[command(name = "nebenk")]
@@ -144,6 +152,16 @@ enum MarketplaceCommands {
         /// Provider node ID (base58 encoded)
         #[arg(long)]
         provider: String,
+    },
+
+    /// Start marketplace network node
+    Network {
+        /// Listen address (e.g., /ip4/0.0.0.0/tcp/0)
+        #[arg(long, default_value = "/ip4/0.0.0.0/tcp/0")]
+        listen: String,
+        /// Bootstrap peer address (optional)
+        #[arg(long)]
+        bootstrap: Option<String>,
     },
 
     /// Settlement operations
@@ -447,6 +465,42 @@ async fn handle_marketplace_command(
             let score = reputation.get_score(provider_id).await;
             println!("Provider: {}", provider);
             println!("Reputation Score: {}/100", score.0);
+        }
+
+        MarketplaceCommands::Network { listen, bootstrap } => {
+            let listen_addr: Multiaddr = listen.parse()
+                .map_err(|e| anyhow::anyhow!("Invalid listen address: {}", e))?;
+            
+            let key_path = data_dir.join("node.key");
+            let identity = NodeIdentity::load_or_create(key_path)?;
+            let keypair = identity.to_libp2p_keypair();
+            
+            let (cmd_tx, cmd_rx) = mpsc::unbounded_channel();
+            let (evt_tx, mut evt_rx) = mpsc::unbounded_channel();
+            
+            let network = MarketplaceNetwork::new(keypair, cmd_rx, evt_tx).map_err(|e| anyhow::anyhow!(e))?;
+            
+            println!("Starting marketplace network on {}", listen_addr);
+            println!("Node ID: {}", identity.node_id());
+            
+            // Handle events in background
+            tokio::spawn(async move {
+                while let Some(event) = evt_rx.recv().await {
+                    match event {
+                        MarketplaceEvent::ProviderAdvertisement(adv) => {
+                            println!("New provider: {} - {} CPU, {} GB RAM", 
+                                adv.node_id, adv.capabilities.cpu_cores, adv.capabilities.memory_gb);
+                        }
+                        MarketplaceEvent::ProviderHeartbeat(hb) => {
+                            println!("Heartbeat from: {}", hb.node_id);
+                        }
+                        _ => {}
+                    }
+                }
+            });
+            
+            // Run network (this blocks)
+            network.run(listen_addr).await?;
         }
 
         MarketplaceCommands::Settlement(cmd) => {

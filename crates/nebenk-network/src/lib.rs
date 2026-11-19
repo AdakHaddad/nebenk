@@ -1,9 +1,14 @@
 pub mod handshake;
+pub mod marketplace;
 pub mod peer;
 pub mod protocol;
 pub mod transport;
 
 pub use handshake::{perform_client_handshake, perform_server_handshake, HandshakeResult};
+pub use marketplace::{
+    MarketplaceBehaviour, MarketplaceBehaviourEvent, MarketplaceCommand, MarketplaceEvent,
+    MarketplaceNetwork, MARKETPLACE_KAD_PROTOCOL, topics,
+};
 pub use peer::{P2pListener, P2pPeer};
 pub use protocol::{
     ClusterMember, DeviceCapabilitiesMsg, DeploymentAcceptanceMsg, DeploymentId,

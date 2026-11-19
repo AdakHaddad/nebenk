@@ -5,6 +5,10 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
+[features]
+default = []
+blockchain = ["alloy"]
+
 [dependencies]
 nebenk-core = { path = "../nebenk-core" }
 nebenk-identity = { path = "../nebenk-identity" }
@@ -24,6 +28,9 @@ tracing = { workspace = true }
 async-trait = "0.1"
 uuid = { version = "1.0", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
+
+# Blockchain dependencies - optional feature
+alloy = { workspace = true, optional = true }
 
 [dev-dependencies]
 tempfile = "3.17"

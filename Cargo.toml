@@ -43,7 +43,11 @@ bytes = "1.10"
 bs58 = "0.5"
 tempfile = "3.17"
 criterion = "0.5"
-libp2p = { version = "0.54", features = ["tcp", "noise", "yamux", "gossipsub", "kad", "mdns", "identify", "dns", "tokio"] }
+libp2p = { version = "0.54", features = ["tcp", "noise", "yamux", "gossipsub", "kad", "mdns", "identify", "dns", "tokio", "macros"] }
 async-trait = "0.1"
+futures-util = { version = "0.3", features = ["sink"] }
 uuid = { version = "1.0", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
+
+# Blockchain dependencies - optional
+alloy = { version = "0.2", features = ["full", "providers", "transport-http", "rpc-client", "hyper", "rpc-types-eth"] }
