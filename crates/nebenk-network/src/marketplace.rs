@@ -211,6 +211,22 @@ impl MarketplaceNetwork {
         }
     }
 
+    /// Dial a peer address to establish connection
+    pub fn dial(&mut self, addr: Multiaddr) -> Result<(), anyhow::Error> {
+        self.swarm.dial(addr)?;
+        Ok(())
+    }
+
+    /// Get the local peer ID
+    pub fn local_peer_id(&self) -> PeerId {
+        *self.swarm.local_peer_id()
+    }
+
+    /// Get listening addresses
+    pub fn listeners(&self) -> impl Iterator<Item = &Multiaddr> {
+        self.swarm.listeners()
+    }
+
     async fn handle_command(&mut self, cmd: MarketplaceCommand) {
         match cmd {
             MarketplaceCommand::PublishAdvertisement(adv) => {
