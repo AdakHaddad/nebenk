@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::sync::RwLock;
-use tracing::{debug, info};
+
 
 /// Reputation configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -320,7 +320,6 @@ impl ReputationEngine {
 mod tests {
     use super::*;
     use nebenk_core::types::NodeId;
-    use nebenk_core::types::ClusterId;
     
     #[tokio::test]
     async fn test_reputation_initialization() {

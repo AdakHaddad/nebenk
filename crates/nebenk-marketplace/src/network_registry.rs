@@ -3,7 +3,7 @@
 use crate::types::*;
 use crate::provider::ProviderHeartbeat;
 use crate::registry::{ProviderFilter, ProviderListRequest, ProviderListResponse, RegistryConfig};
-use nebenk_core::types::{ClusterId, NodeId};
+use nebenk_core::types::NodeId;
 use nebenk_core::error::{NebenkError, Result};
 use nebenk_identity::NodeIdentity;
 use nebenk_network::marketplace::{
@@ -38,7 +38,7 @@ impl NetworkMarketplaceRegistry {
     pub async fn new(
         identity: &NodeIdentity,
         config: RegistryConfig,
-        listen_addr: Multiaddr,
+        _listen_addr: Multiaddr,
     ) -> Result<(Self, MarketplaceNetwork)> {
         let local_node_id = identity.node_id();
         let keypair = identity.to_libp2p_keypair();
@@ -49,7 +49,7 @@ impl NetworkMarketplaceRegistry {
         let network = MarketplaceNetwork::new(keypair, cmd_rx, evt_tx)
             .map_err(|e| NebenkError::Network(e.to_string()))?;
         
-        let mut registry = Self {
+        let registry = Self {
             providers: Arc::new(RwLock::new(HashMap::new())),
             heartbeats: Arc::new(RwLock::new(HashMap::new())),
             config,

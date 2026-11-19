@@ -1,5 +1,5 @@
 use crate::protocol::{
-    DeploymentAcceptanceMsg, DeploymentOfferMsg, ProviderAdvertisementMsg, ProviderFilterMsg,
+    DeploymentAcceptanceMsg, DeploymentOfferMsg, ProviderAdvertisementMsg,
     ProviderHeartbeatMsg, ProviderListRequestMsg, ProviderListResponseMsg,
 };
 use libp2p::gossipsub::{Behaviour as Gossipsub, ConfigBuilder, Event as GossipsubEvent, IdentTopic, MessageAuthenticity, MessageId, ValidationMode};
@@ -316,7 +316,7 @@ impl MarketplaceNetwork {
             }
             SwarmEvent::Behaviour(MarketplaceBehaviourEvent::Identify(
                 IdentifyEvent::Received {
-                    peer_id,
+                    peer_id: _,
                     info: _,
                     ..
                 },

@@ -4,7 +4,7 @@ use crate::types::*;
 use crate::provider::ProviderHeartbeat;
 use nebenk_core::types::{ClusterId, NodeId};
 use nebenk_core::error::{NebenkError, Result};
-use nebenk_identity::NodeIdentity;
+
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -130,7 +130,7 @@ impl MarketplaceRegistry {
     
     /// Handle provider heartbeat
     pub async fn handle_heartbeat(&self, hb: ProviderHeartbeat) -> Result<()> {
-        let now = SystemTime::now()
+        let _now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs();
@@ -294,6 +294,7 @@ mod tests {
     use crate::types::*;
     use nebenk_core::types::{ClusterId, NodeId};
     use nebenk_identity::NodeIdentity;
+    
     
     #[tokio::test]
     async fn test_registry_advertisement() {

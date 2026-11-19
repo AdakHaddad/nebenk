@@ -2,7 +2,7 @@
 
 use crate::provider::ProviderHeartbeat;
 use nebenk_core::types::{ClusterId, NodeId};
-use nebenk_network::protocol;
+
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -164,8 +164,9 @@ impl ProviderAdvertisement {
     pub fn signing_data(&self) -> Vec<u8> {
         let mut clone = self.clone();
         clone.signature = Vec::new();
-        let mut buf = Vec::new();
-        cbor4ii::serde::to_vec(buf, &clone).unwrap_or_default()
+        let buf = Vec::new();
+        let buf = cbor4ii::serde::to_vec(buf, &clone).unwrap_or_default();
+        buf
     }
     
     /// Verify the signature

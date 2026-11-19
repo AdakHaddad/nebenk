@@ -2,7 +2,7 @@
 
 use crate::types::*;
 use nebenk_core::types::{ClusterId, NodeId};
-use nebenk_core::error::{NebenkError, Result};
+use nebenk_core::error::Result;
 use nebenk_identity::NodeIdentity;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -416,7 +416,7 @@ mod tests {
     
     #[test]
     fn test_capabilities_match() {
-        let caps = DeviceCapabilities {
+        let _caps = DeviceCapabilities {
             cpu_cores: 8,
             cpu_arch: "x86_64".to_string(),
             os: "linux".to_string(),
@@ -434,7 +434,7 @@ mod tests {
             features: vec!["wasm".to_string()],
         };
         
-        let req = ResourceRequirements {
+        let _req = ResourceRequirements {
             min_cpu_cores: 4,
             min_memory_gb: 16,
             min_storage_gb: 100,

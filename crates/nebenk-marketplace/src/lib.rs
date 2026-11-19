@@ -27,7 +27,7 @@ pub use blockchain::{
     BlockchainConfig, BlockchainClient, OnChainSettlementEngine, ProviderStake as BlockchainProviderStake,
 };
 
-use nebenk_core::error::Result;
+
 
 /// Marketplace integration with NEBENK runtime
 pub struct MarketplaceIntegration {
@@ -120,11 +120,12 @@ impl Default for MarketplaceIntegration {
     }
 }
 
-use std::sync::Arc;
+
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
     
     #[test]
     fn test_marketplace_integration_creation() {

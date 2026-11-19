@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use futures_util::StreamExt;
+
 use nebenk_core::types::{ClusterId, NodeId};
 use nebenk_identity::NodeIdentity;
 use nebenk_runtime::{NodeConfig, NodeRuntime};
@@ -14,10 +14,10 @@ use nebenk_marketplace::{
     types::*,
 };
 use nebenk_network::{
-    marketplace::{MarketplaceCommand, MarketplaceEvent, MarketplaceNetwork},
-    protocol::ProviderAdvertisementMsg,
+    marketplace::{MarketplaceEvent, MarketplaceNetwork},
+    
 };
-use libp2p::identity::Keypair;
+
 use libp2p::Multiaddr;
 use uuid::Uuid;
 use std::fs;
@@ -467,7 +467,7 @@ async fn handle_marketplace_command(
             println!("Reputation Score: {}/100", score.0);
         }
 
-        MarketplaceCommands::Network { listen, bootstrap } => {
+        MarketplaceCommands::Network { listen, bootstrap: _ } => {
             let listen_addr: Multiaddr = listen.parse()
                 .map_err(|e| anyhow::anyhow!("Invalid listen address: {}", e))?;
             
@@ -475,7 +475,7 @@ async fn handle_marketplace_command(
             let identity = NodeIdentity::load_or_create(key_path)?;
             let keypair = identity.to_libp2p_keypair();
             
-            let (cmd_tx, cmd_rx) = mpsc::unbounded_channel();
+            let (_cmd_tx, cmd_rx) = mpsc::unbounded_channel();
             let (evt_tx, mut evt_rx) = mpsc::unbounded_channel();
             
             let network = MarketplaceNetwork::new(keypair, cmd_rx, evt_tx).map_err(|e| anyhow::anyhow!(e))?;

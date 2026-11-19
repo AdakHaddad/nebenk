@@ -295,6 +295,7 @@ pub struct DeploymentAcceptance {
 }
 
 /// Deployment cancellation
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct DeploymentCancellation {
     deployment_id: DeploymentId,
